@@ -194,11 +194,13 @@ def neighboring_tiles_eval_func(asp, tron_gamestate):
     if asp.is_terminal_state(tron_gamestate):
         print("terminal state")
         return float("-inf") #a terminal state for ptm
+        #1000 * cutoff ply
+        #need to figure out who is dead
 
     ptm_score = calculate_score(asp, ptm, board, tron_gamestate, ptm_loc)
-    print("ptm score ", ptm_score)
+   # print("ptm score ", ptm_score)
     op_score = calculate_score(asp, op, board, tron_gamestate, op_loc)
-    print("op score ", op_score)
+    #print("op score ", op_score)
 
     
     return ptm_score - op_score
@@ -209,14 +211,14 @@ def calculate_score(asp, player, board, tron_gamestate, loc):
     THIS is why we do not need to weight powerups in ab_cutoff itself
     should check for armor here, or elsewhere?
     '''
-    print("in calc score, board ")
+    #print("in calc score, board ")
     actions = TronProblem.get_safe_actions(board, loc)
     score_sum = 0
-    print("player ", player, "'s score here is ", score_sum, ", available actions ", actions)
-    print("len", len(actions))
+    #print("player ", player, "'s score here is ", score_sum, ", available actions ", actions)
+    #print("len", len(actions))
     if len(actions) > 0:
         for a in actions:
-            print("in for loop score_sum is ", score_sum)
+            #print("in for loop score_sum is ", score_sum)
             next_loc = get_next_loc(loc, a) #a (x,y) tuple
             next_cell = board[next_loc[0]][next_loc[1]] # a celltype "#", "@" etc
             next_state = asp.transition(tron_gamestate, a) #a gamestate
@@ -230,15 +232,23 @@ def calculate_score(asp, player, board, tron_gamestate, loc):
                 score_sum += -10
             elif next_cell in GOOD_POWERUPS:
                 score_sum += 10
+            
+            #a state is less favourable if it is directly adjacent to walls
+            score_sum += (8 - adjacent_walls(board, loc))
     else:
-        print("player has no available actions")
-        score_sum = 0
+        #print("player has no available actions")
+        score_sum = float("-1000")
         
     #another loop in which same series of actions performed for each next_state
-    print("Score sum ", score_sum)
+    #print("Score sum ", score_sum)
     return score_sum
 
-        
+def adjacent_walls(board, loc):
+    '''takes in the board and a loc and returns the number of
+    adjacent cells that are occupied by a wall'''
+    safeLocs = TronProblem.get_safe_actions(board, loc)
+    unsafeLocs = 8 - len(safeLocs)
+    return unsafeLocs
     
 
 def get_next_loc(loc, action):

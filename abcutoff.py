@@ -39,10 +39,7 @@ def alpha_beta_cutoff(asp, tron_state, cutoff_ply, eval_func):
 
 def min_move_ab_cutoff(asp, curr_state, player, move_to_here, alpha, beta, cutoff_ply, eval_func):
 
-    if asp.is_terminal_state(curr_state):
-        return (move_to_here, asp.evaluate_state(curr_state)[player]) 
-    elif cutoff_ply == 0:
-        #WEIGHT BY POWERUP HERE?
+    if asp.is_terminal_state(curr_state) or cutoff_ply == 0:
         return (move_to_here, eval_func(asp, curr_state)) #assuming this is being updated continuously?
     else:
         best_action = None
