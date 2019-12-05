@@ -186,17 +186,21 @@ def neighboring_tiles_eval_func(asp, tron_gamestate):
     
     #the player to move
     ptm = tron_gamestate.ptm 
-    loc_ptm = locs[ptm] 
-    op = get_other_player(p1)
-    loc_op = locs[op]
+    ptm_loc = locs[ptm]
+    op = get_other_player(ptm)
+    op_loc = locs[op]
 
     #check if terminal state
     if asp.is_terminal_state(tron_gamestate):
+        print("terminal state")
         return float("-inf") #a terminal state for ptm
 
     ptm_score = calculate_score(asp, ptm, board, tron_gamestate, ptm_loc)
+    print("ptm score ", ptm_score)
     op_score = calculate_score(asp, op, board, tron_gamestate, op_loc)
+    print("op score ", op_score)
 
+    
     return ptm_score - op_score
 
 def calculate_score(asp, player, board, tron_gamestate, loc):
@@ -205,26 +209,37 @@ def calculate_score(asp, player, board, tron_gamestate, loc):
     THIS is why we do not need to weight powerups in ab_cutoff itself
     should check for armor here, or elsewhere?
     '''
-
+    print("in calc score, board ")
     actions = TronProblem.get_safe_actions(board, loc)
     score_sum = 0
-    for a in actions:
-        next_loc = get_next_loc(loc, a) #a (x,y) tuple
-        next_cell = board[next_loc[0]][next_loc[1]] # a celltype "#", "@" etc
+    print("player ", player, "'s score here is ", score_sum, ", available actions ", actions)
+    print("len", len(actions))
+    if len(actions) > 0:
+        for a in actions:
+            print("in for loop score_sum is ", score_sum)
+            next_loc = get_next_loc(loc, a) #a (x,y) tuple
+            next_cell = board[next_loc[0]][next_loc[1]] # a celltype "#", "@" etc
+            next_state = asp.transition(tron_gamestate, a) #a gamestate
+            #SOMETHING LIKE THIS
+            #ALSO TAKE INTO ACCOUNT ARMOR?
+            #THIS COULD JUST BE A COMPLICATED SERIES OF IF/ELSE
+            if next_state.player_has_armor(player):
+                #armor stuff
+                pass
+            if next_cell in DEATH_CELLS:
+                score_sum += -10
+            elif next_cell in GOOD_POWERUPS:
+                score_sum += 10
+    else:
+        print("player has no available actions")
+        score_sum = 0
         
-        #SOMETHING LIKE THIS
-        #ALSO TAKE INTO ACCOUNT ARMOR?
-        #THIS COULD JUST BE A COMPLICATED SERIES OF IF/ELSE
-        if next_state.player_has_armor(player):
-            #armor stuff
-            pass
-        if next_cell in DEATH_CELLS:
-            score_sum += -10
-        elif next_cell in GOOD_POWERUPS:
-            score_sum += 10
+    #another loop in which same series of actions performed for each next_state
+    print("Score sum ", score_sum)
+    return score_sum
 
-        next_state = asp.transition(tron_gamestate, a) #a gamestate
-        score_sum += calculate_score(next_state.board, next_state.locs[player])
+        
+    
 
 def get_next_loc(loc, action):
     '''
