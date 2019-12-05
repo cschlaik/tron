@@ -31,16 +31,20 @@ def alpha_beta_cutoff(asp, tron_state, cutoff_ply, eval_func):
 
     best_move = max_move_ab_cutoff(asp, tron_state, tron_state.player_to_move(), None,
     float("-inf"), float("inf"), cutoff_ply, eval_func)
+    #print("best_move", best_move)
+
     if not(best_move == None):
         return best_move[0]
     else:
-        print("NO MORE MOVES")
+        #print("NO MORE MOVES for player", tron_state.player_to_move())
         return 'U' #arbitrarily
 
 def min_move_ab_cutoff(asp, curr_state, player, move_to_here, alpha, beta, cutoff_ply, eval_func):
 
-    if asp.is_terminal_state(curr_state) or cutoff_ply == 0:
-        return (move_to_here, eval_func(asp, curr_state)) #assuming this is being updated continuously?
+    if asp.is_terminal_state(curr_state):
+        return (move_to_here, cutoff_ply*eval_func(asp, curr_state))
+    elif cutoff_ply == 0:
+        return (move_to_here, eval_func(asp, curr_state))
     else:
         best_action = None
         loc = curr_state.player_locs[player]
@@ -57,7 +61,7 @@ def min_move_ab_cutoff(asp, curr_state, player, move_to_here, alpha, beta, cutof
 
                 #PRUNING
                 if (best_action[1] <= alpha):
-                    return best_action
+                    best_action
                 if (best_action[1] < beta):
                     beta = best_action[1]
 
@@ -65,19 +69,21 @@ def min_move_ab_cutoff(asp, curr_state, player, move_to_here, alpha, beta, cutof
 
 def max_move_ab_cutoff(asp, curr_state, player, move_to_here, alpha, beta, cutoff_ply, eval_func):
     if asp.is_terminal_state(curr_state):
-        return (move_to_here, asp.evaluate_state(curr_state)[player])
+        return (move_to_here, cutoff_ply*eval_func(asp, curr_state))
     elif cutoff_ply == 0:
         return (move_to_here, eval_func(asp, curr_state))
+        #changed this from the TronProblem's eval_state
     else:
         best_action = None
         loc = curr_state.player_locs[player]
         actions = TronProblem.get_safe_actions(curr_state.board, loc)
-        if len(actions) == 0:
-            print("NO MORE SAFE ACTIONS")
+        #if len(actions) == 0:
+            #print("NO MORE SAFE ACTIONS")
 
         for action in actions: #looking at the next level
             next_state = asp.transition(curr_state, action)
             result = min_move_ab_cutoff(asp, next_state, player, action, alpha, beta, cutoff_ply-1, eval_func)
+            #print("result is", result)
             if not(result == None):
                 if best_action == None:
                     best_action = (action, result[1])

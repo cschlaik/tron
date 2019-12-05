@@ -13,8 +13,8 @@ from dijkstra import *
 
 #BOTS VERSION 1.2
 #new best is neighboring_tiles_eval_func
-#NEED TO DO: 
-#figure out how to incorporate has_armor flag
+#wins ~30/40 times on python gamerunner.py -bots student ta1 -map maps/empty room.txt -multi test 15 -no image
+#need to: modify ab_cutoff to include speed
 #would be good to make all functions inside StudentBot
 
 #BOTS VERSION 1.1
@@ -29,13 +29,7 @@ from dijkstra import *
 #distance function
 
 
-#VARIABLES TO EXPERIMENT WITH
-#12 is the max that works with start_eval_func
 CUTOFF_PLY = 8 #how many look-ahead for abcutoff
-POWERUP_WEIGHT = 100 
-BAD_CELLS = [CellType.WALL, CellType.BARRIER, CellType.SPEED] #make this change w strategy
-GOOD_POWERUPS = [CellType.ARMOR, CellType.BOMB, CellType.TRAP]
-DEATH_CELLS = [CellType.WALL, CellType.BARRIER]
 
 def manhattan_distance(loc1, loc2):
     '''
@@ -189,58 +183,76 @@ def neighboring_tiles_eval_func(asp, tron_gamestate):
     ptm_loc = locs[ptm]
     op = get_other_player(ptm)
     op_loc = locs[op]
+      
 
-    #check if terminal state
-    if asp.is_terminal_state(tron_gamestate):
-        print("terminal state")
-        return float("-inf") #a terminal state for ptm
-        #1000 * cutoff ply
-        #need to figure out who is dead
-
-    ptm_score = calculate_score(asp, ptm, board, tron_gamestate, ptm_loc)
+    ptm_score = calculate_score(asp, ptm, board, tron_gamestate, ptm_loc, True)
    # print("ptm score ", ptm_score)
-    op_score = calculate_score(asp, op, board, tron_gamestate, op_loc)
+    op_score = calculate_score(asp, op, board, tron_gamestate, op_loc, True)
     #print("op score ", op_score)
 
-    
     return ptm_score - op_score
 
-def calculate_score(asp, player, board, tron_gamestate, loc):
+GOOD_POWERUP_WEIGHT = 100 
+BAD_CELLS = [CellType.WALL, CellType.BARRIER, CellType.SPEED] #make this change w strategy
+GOOD_POWERUPS = [CellType.ARMOR, CellType.BOMB, CellType.TRAP]
+#DEATH_CELLS = [CellType.WALL, CellType.BARRIER]
+
+def calculate_score(asp, player, board, tron_gamestate, loc, recur):
     '''
     The core of project –– figuring out weights and so on based on experimentation
     THIS is why we do not need to weight powerups in ab_cutoff itself
     should check for armor here, or elsewhere?
+
+    "recur" boolean indicates whether another recursion should be performed
     '''
-    #print("in calc score, board ")
+
+    #check if terminal state
+    if asp.is_terminal_state(tron_gamestate):
+        if asp.evaluate_state(tron_gamestate)[player] == 0.0:
+            return(-1000)
+        else:
+            return(1000)
+
     actions = TronProblem.get_safe_actions(board, loc)
     score_sum = 0
+
     #print("player ", player, "'s score here is ", score_sum, ", available actions ", actions)
-    #print("len", len(actions))
+
     if len(actions) > 0:
         for a in actions:
             #print("in for loop score_sum is ", score_sum)
             next_loc = get_next_loc(loc, a) #a (x,y) tuple
             next_cell = board[next_loc[0]][next_loc[1]] # a celltype "#", "@" etc
             next_state = asp.transition(tron_gamestate, a) #a gamestate
-            #SOMETHING LIKE THIS
-            #ALSO TAKE INTO ACCOUNT ARMOR?
-            #THIS COULD JUST BE A COMPLICATED SERIES OF IF/ELSE
+
             if next_state.player_has_armor(player):
-                #armor stuff
-                pass
-            if next_cell in DEATH_CELLS:
-                score_sum += -10
-            elif next_cell in GOOD_POWERUPS:
-                score_sum += 10
+                if ((next_cell in [CellType.WALL, CellType.SPEED]) or next_cell.isdigit()): #isdigit should check for other player
+                    score_sum += -10
+                elif next_cell in GOOD_POWERUPS:
+                    score_sum += GOOD_POWERUP_WEIGHT
+                else: 
+                    assert next_cell == CellType.SPACE or next_cell == CellType.BARRIER #delte l8r
+                    score_sum += 1
+            else:
+                if ((next_cell in [CellType.WALL, CellType.BARRIER, CellType.SPEED]) or next_cell.isdigit()):
+                    score_sum += -10
+                elif next_cell in GOOD_POWERUPS:
+                    score_sum += GOOD_POWERUP_WEIGHT
+                else:
+                    assert next_cell == CellType.SPACE #delte l8r
+                    score_sum += 1
             
             #a state is less favourable if it is directly adjacent to walls
             score_sum += (8 - adjacent_walls(board, loc))
-    else:
+
+            #doesn't work rn
+            #if recur: #kind of weird bc actually, it will be next player
+                #score_sum += 0.5*calculate_score(asp, player, next_state.board, next_state, next_loc, False)
+    
+    else: #NEXT move will be terminal state for player
         #print("player has no available actions")
-        score_sum = float("-1000")
-        
-    #another loop in which same series of actions performed for each next_state
-    #print("Score sum ", score_sum)
+        score_sum = -600 #should be less than 1000
+    
     return score_sum
 
 def adjacent_walls(board, loc):
@@ -305,7 +317,7 @@ class StudentBot:
 
     def __init__(self):
         self.start = False #indicates we are in the startgame strategy
-        self.has_armor = False
+        #self.has_armor = False
         #self.tronproblem = None
 
     def decide(self, asp):
@@ -318,7 +330,7 @@ class StudentBot:
         """
         #self.tronproblem = asp
         start_state = asp.get_start_state()
-        self.has_armor = start_state.player_has_armor(start_state.ptm)
+        #self.has_armor = start_state.player_has_armor(start_state.ptm)
 
         if self.start:
             return alpha_beta_cutoff(asp, start_state, CUTOFF_PLY, start_eval_func)
