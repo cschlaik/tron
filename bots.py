@@ -132,6 +132,7 @@ def pathlengths_eval_func(asp, tron_gamestate):
 
 def board_eval_func(asp, tron_gamestate):
     '''
+    NO LONGER USING
         a function that takes in a Tron GameState and outputs
         a real number indicating how good that state is for the
         player who is using alpha_beta_cutoff to choose their action.
@@ -206,13 +207,24 @@ def calculate_score(asp, player, board, tron_gamestate, loc):
     '''
 
     actions = TronProblem.get_safe_actions(board, loc)
+    score_sum = 0
     for a in actions:
         next_loc = get_next_loc(loc, a) #a (x,y) tuple
         next_cell = board[next_loc[0]][next_loc[1]] # a celltype "#", "@" etc
+        
+        #SOMETHING LIKE THIS
+        #ALSO TAKE INTO ACCOUNT ARMOR?
+        #THIS COULD JUST BE A COMPLICATED SERIES OF IF/ELSE
+        if next_state.player_has_armor(player):
+            #armor stuff
+            pass
+        if next_cell in DEATH_CELLS:
+            score_sum += -10
+        elif next_cell in GOOD_POWERUPS:
+            score_sum += 10
+
         next_state = asp.transition(tron_gamestate, a) #a gamestate
-
-        if next_cell in 
-
+        score_sum += calculate_score(next_state.board, next_state.locs[player])
 
 def get_next_loc(loc, action):
     '''
@@ -237,10 +249,14 @@ def get_other_player(p1):
         return 0
 
 def location_ring(loc, remove):
+    '''
+    NO LONGER USING
+    '''
     return[(loc[0], loc[1]+remove), (loc[0], loc[1]-remove), (loc[0]+remove, loc[1]), (loc[0]-remove, loc[1])]
 
 def weight_cell(cell, op):
     '''
+    NO LONGER USING
     A primitive way to weight powerups
     '''
     if ((cell in BAD_CELLS) or (cell == op)): #not sure this second check works
@@ -301,7 +317,6 @@ class StudentBot:
         feel free to leave it as "pass"
         """
         
-
 class RandBot:
     """Moves in a random (safe) direction"""
 
