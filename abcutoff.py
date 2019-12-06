@@ -4,6 +4,41 @@ from trontypes import CellType, PowerupType
 import random, math
 from queue import Queue, LifoQueue, PriorityQueue
 
+def get_safe_actions(state):
+        """
+        FROM TRONPROBLEM, BUT TAKES INTO ACCOUNT ARMOR 
+        Given a game board and a location on that board,
+        returns the set of actions that don't result in immediate collisions.
+        Input:
+            board- a list of lists of characters representing cells
+            loc- location (<row>, <column>) to find safe actions from
+        Output:
+            returns the set of actions that don't result in immediate collisions.
+            An immediate collision occurs when you run into a barrier, wall, or
+            the other player
+        """
+        safe = set()
+        if state.player_has_armor(state.ptm):
+
+            for action in {U, D, L, R}:
+                r1, c1 = TronProblem.move(state.player_locs[state.ptm], action)
+                if not (
+                    state.board[r1][c1] == CellType.WALL
+                    or TronProblem.is_cell_player(state.board, (r1, c1))
+                ):
+                    safe.add(action)
+            return safe
+        else:
+            for action in {U, D, L, R}:
+                r1, c1 = TronProblem.move(state.player_locs[state.ptm], action)
+                if not (
+                    state.board[r1][c1] == CellType.BARRIER
+                    or state.board[r1][c1] == CellType.WALL
+                    or TronProblem.is_cell_player(state.board, (r1, c1))
+                ):
+                    safe.add(action)
+            return safe
+
 def alpha_beta_cutoff(asp, tron_state, cutoff_ply, eval_func):
     """
     This function should:
@@ -29,9 +64,10 @@ def alpha_beta_cutoff(asp, tron_state, cutoff_ply, eval_func):
     Output: an action(an element of asp.get_available_actions(asp.get_start_state()))
     """
 
-    best_move = max_move_ab_cutoff(asp, tron_state, tron_state.player_to_move(), None,
+    best_move = max_move_ab_cutoff(asp, tron_state, None,
     float("-inf"), float("inf"), cutoff_ply, eval_func)
-    #print("best_move", best_move)
+    
+    print("********BEST MOVE", best_move, "\n")
 
     if not(best_move == None):
         return best_move[0]
@@ -39,20 +75,36 @@ def alpha_beta_cutoff(asp, tron_state, cutoff_ply, eval_func):
         #print("NO MORE MOVES for player", tron_state.player_to_move())
         return 'U' #arbitrarily
 
-def min_move_ab_cutoff(asp, curr_state, player, move_to_here, alpha, beta, cutoff_ply, eval_func):
+def min_move_ab_cutoff(asp, curr_state, move_to_here, alpha, beta, cutoff_ply, eval_func):
 
     if asp.is_terminal_state(curr_state):
+        print("min, terminal state")
         return (move_to_here, cutoff_ply*eval_func(asp, curr_state))
     elif cutoff_ply == 0:
+        print("min, reached cutoff")
         return (move_to_here, eval_func(asp, curr_state))
     else:
         best_action = None
-        loc = curr_state.player_locs[player]
-        actions = TronProblem.get_safe_actions(curr_state.board, loc)
+        loc = curr_state.player_locs[curr_state.ptm] 
+        actions = get_safe_actions(curr_state)
+        if len(actions) == 0:
+            print("min NO MORE SAFE ACTIONS for player ", curr_state.ptm)
+            print("move to here", move_to_here)
+            print("level", cutoff_ply)
+            best_action = (move_to_here, (cutoff_ply-1)*eval_func(asp, curr_state))
+            print("returning ", best_action)
+            print(TronProblem.visualize_state(curr_state, False))
+            
+            return best_action
         
         for action in actions:
-            next_state = asp.transition(curr_state, action) #DOES THIS AUTOMATICALLY TAKE POWERUPS INTO ACCOUNT?
-            result = max_move_ab_cutoff(asp, next_state, player, action, alpha, beta, cutoff_ply-1, eval_func) 
+            next_state = asp.transition(curr_state, action) 
+            if curr_state.get_remaining_turns_speed(curr_state.ptm) > 0:
+                print("on speed")
+                result = min_move_ab_cutoff(asp, next_state, action, alpha, beta, cutoff_ply-1, eval_func)
+            else:
+                result = max_move_ab_cutoff(asp, next_state, action, alpha, beta, cutoff_ply-1, eval_func) 
+            print("min, result is", result)
             if not(result == None):
                 if best_action == None:
                     best_action = (action, result[1])
@@ -61,29 +113,40 @@ def min_move_ab_cutoff(asp, curr_state, player, move_to_here, alpha, beta, cutof
 
                 #PRUNING
                 if (best_action[1] <= alpha):
-                    best_action
+                   return best_action
                 if (best_action[1] < beta):
                     beta = best_action[1]
 
         return best_action
 
-def max_move_ab_cutoff(asp, curr_state, player, move_to_here, alpha, beta, cutoff_ply, eval_func):
+def max_move_ab_cutoff(asp, curr_state, move_to_here, alpha, beta, cutoff_ply, eval_func):
+    print("max, move to here", move_to_here)
+    print("max, level", cutoff_ply)
     if asp.is_terminal_state(curr_state):
+        print("max, terminal state")
         return (move_to_here, cutoff_ply*eval_func(asp, curr_state))
     elif cutoff_ply == 0:
+        print("max, reached cutoff")
         return (move_to_here, eval_func(asp, curr_state))
-        #changed this from the TronProblem's eval_state
     else:
         best_action = None
-        loc = curr_state.player_locs[player]
-        actions = TronProblem.get_safe_actions(curr_state.board, loc)
-        #if len(actions) == 0:
-            #print("NO MORE SAFE ACTIONS")
+        loc = curr_state.player_locs[curr_state.ptm]
+        actions = get_safe_actions(curr_state)
+        if len(actions) == 0:
+            print("max NO MORE SAFE ACTIONS for player", curr_state.ptm)
+            best_action = (move_to_here, (cutoff_ply-1)*eval_func(asp, curr_state))
+            print("returning ", best_action)
+            print(TronProblem.visualize_state(curr_state, False))    
+            return best_action
 
         for action in actions: #looking at the next level
             next_state = asp.transition(curr_state, action)
-            result = min_move_ab_cutoff(asp, next_state, player, action, alpha, beta, cutoff_ply-1, eval_func)
-            #print("result is", result)
+            if curr_state.get_remaining_turns_speed(curr_state.ptm) > 0: #correct!?
+                print("on speed")
+                result = max_move_ab_cutoff(asp, next_state, action, alpha, beta, cutoff_ply-1, eval_func)
+            else:
+                result = min_move_ab_cutoff(asp, next_state, action, alpha, beta, cutoff_ply-1, eval_func)
+            print("max, result is", result)
             if not(result == None):
                 if best_action == None:
                     best_action = (action, result[1])

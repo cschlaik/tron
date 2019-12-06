@@ -29,7 +29,42 @@ from dijkstra import *
 #distance function
 
 
-CUTOFF_PLY = 8 #how many look-ahead for abcutoff
+CUTOFF_PLY = 4 #how many look-ahead for abcutoff
+
+def get_safe_actions(state):
+        """
+        FROM TRONPROBLEM, BUT TAKES INTO ACCOUNT ARMOR 
+        Given a game board and a location on that board,
+        returns the set of actions that don't result in immediate collisions.
+        Input:
+            board- a list of lists of characters representing cells
+            loc- location (<row>, <column>) to find safe actions from
+        Output:
+            returns the set of actions that don't result in immediate collisions.
+            An immediate collision occurs when you run into a barrier, wall, or
+            the other player
+        """
+        safe = set()
+        if state.player_has_armor(state.ptm):
+
+            for action in {U, D, L, R}:
+                r1, c1 = TronProblem.move(state.player_locs[state.ptm], action)
+                if not (
+                    state.board[r1][c1] == CellType.WALL
+                    or TronProblem.is_cell_player(state.board, (r1, c1))
+                ):
+                    safe.add(action)
+            return safe
+        else:
+            for action in {U, D, L, R}:
+                r1, c1 = TronProblem.move(state.player_locs[state.ptm], action)
+                if not (
+                    state.board[r1][c1] == CellType.BARRIER
+                    or state.board[r1][c1] == CellType.WALL
+                    or TronProblem.is_cell_player(state.board, (r1, c1))
+                ):
+                    safe.add(action)
+            return safe
 
 def manhattan_distance(loc1, loc2):
     '''
@@ -68,104 +103,6 @@ def start_eval_func(asp, tron_gamestate):
         return score
     return float("-inf")
 
-def pathlengths_eval_func(asp, tron_gamestate):
-    '''
-    for endgame strategy,
-        a function that takes in a Tron GameState and outputs
-        a real number indicating how good that state is for the
-        player who is using alpha_beta_cutoff to choose their action.
-
-        assigns this number based on the number of cells ptm can reach before the 
-        other player. once we have a list of pathlengths to each cell from both 
-        players, we compare these two lists to determine number of cells that ptm
-        can reach first. 
-
-        ** trying to outlast opponent
-        ** weight speed powerups heavily
-    '''
-    locs = tron_gamestate.player_locs
-    board = tron_gamestate.board
-    
-    #the player to move
-    ptm = tron_gamestate.ptm 
-    loc_ptm = locs[ptm] 
-    op = get_other_player(ptm)
-    loc_op = locs[op]
-    pathlengths_ptm = {} #a dictionary of (cell, dist_to_that_cell)
-    pathlengths_op = {}
-    
-    empty_locs = []
-    for r in range(len(board)):
-        for c in range(len(board[r])):
-            cell = board[r][c]
-            if not(cell in BAD_CELLS):
-                newloc = (r,c)
-                pathlengths_ptm[newloc] = manhattan_distance(loc_ptm, newloc) 
-                                        #astar(loc_ptm, newloc, board)
-                pathlengths_op[newloc] = manhattan_distance(loc_op, newloc) 
-                                        #astar(loc_op, newloc, board) 
-                empty_locs.append(newloc)
-
-    score_ptm = 0
-    score_op = 0
-
-    
-    for loc in empty_locs:
-        dist_ptm = pathlengths_ptm.get(loc)
-        dist_op = pathlengths_op.get(loc)
-        cell = board[loc[0]][loc[1]]
-        if (dist_op == None) and (dist_ptm == None):
-            pass
-        elif (dist_op == None) or (dist_op < dist_ptm):
-            score_ptm += weight_cell(cell, op)
-        else:
-            score_op += weight_cell(cell, ptm)
-    #print("score_ptm", score_ptm)
-    #print("score_op", score_op)
-    return score_ptm - score_op
-
-def board_eval_func(asp, tron_gamestate):
-    '''
-    NO LONGER USING
-        a function that takes in a Tron GameState and outputs
-        a real number indicating how good that state is for the
-        player who is using alpha_beta_cutoff to choose their action.
-
-        evaluates the entire board at this moment in time
-    '''
-    locs = tron_gamestate.player_locs
-    board = tron_gamestate.board
-    
-    #the player to move
-    ptm = tron_gamestate.ptm 
-    loc_ptm = locs[ptm] 
-    ptm_score = 0
-
-    if ptm == 0:  #the other player –– always only two?
-        op = 1
-    else:
-        op = 0
-    loc_op = locs[op]
-    op_score = 0
-
-   
-    for l in location_ring(loc_ptm, 1):
-        ptm_score += 30*weight_cell(tron_gamestate.board[l[0]][l[1]], op)
-    for l in location_ring(loc_op, 1):
-        op_score += 30*weight_cell(tron_gamestate.board[l[0]][l[1]], ptm)
-
-    for l in location_ring(loc_ptm, 2):
-        ptm_score += 10*weight_cell(tron_gamestate.board[l[0]][l[1]], op)
-    for l in location_ring(loc_op, 2):
-        op_score += 10*weight_cell(tron_gamestate.board[l[0]][l[1]], ptm)
-
-    for l in location_ring(loc_ptm, 3):
-        ptm_score += weight_cell(tron_gamestate.board[l[0]][l[1]], op)
-    for l in location_ring(loc_op, 3):
-        op_score += weight_cell(tron_gamestate.board[l[0]][l[1]], ptm)
-
-    return ptm_score - op_score
-
 def neighboring_tiles_eval_func(asp, tron_gamestate):
     '''
         a function that takes in a Tron GameState and outputs
@@ -185,9 +122,9 @@ def neighboring_tiles_eval_func(asp, tron_gamestate):
     op_loc = locs[op]
       
 
-    ptm_score = calculate_score(asp, ptm, board, tron_gamestate, ptm_loc, True)
+    ptm_score = calculate_score(asp, ptm, board, tron_gamestate, ptm_loc, 3)
    # print("ptm score ", ptm_score)
-    op_score = calculate_score(asp, op, board, tron_gamestate, op_loc, True)
+    op_score = calculate_score(asp, op, board, tron_gamestate, op_loc, 3)
     #print("op score ", op_score)
 
     return ptm_score - op_score
@@ -212,42 +149,50 @@ def calculate_score(asp, player, board, tron_gamestate, loc, recur):
             return(-1000)
         else:
             return(1000)
+    if tron_gamestate.get_remaining_turns_speed(player) > 0: #avoid Speeds
+        return -500
 
-    actions = TronProblem.get_safe_actions(board, loc)
+    actions = get_safe_actions(tron_gamestate)
     score_sum = 0
 
     #print("player ", player, "'s score here is ", score_sum, ", available actions ", actions)
 
     if len(actions) > 0:
         for a in actions:
-            #print("in for loop score_sum is ", score_sum)
+
             next_loc = get_next_loc(loc, a) #a (x,y) tuple
             next_cell = board[next_loc[0]][next_loc[1]] # a celltype "#", "@" etc
             next_state = asp.transition(tron_gamestate, a) #a gamestate
+            
 
             if next_state.player_has_armor(player):
                 if ((next_cell in [CellType.WALL, CellType.SPEED]) or next_cell.isdigit()): #isdigit should check for other player
                     score_sum += -10
                 elif next_cell in GOOD_POWERUPS:
                     score_sum += GOOD_POWERUP_WEIGHT
+                    if recur>0: #kind of weird bc actually, it will be next player
+                        score_sum += (1.0/recur)*calculate_score(asp, player, next_state.board, next_state, next_loc, recur-1)
                 else: 
                     assert next_cell == CellType.SPACE or next_cell == CellType.BARRIER #delte l8r
-                    score_sum += 1
+                    score_sum += 10
+                    if recur>0: #kind of weird bc actually, it will be next player
+                        score_sum += (1.0/recur)*calculate_score(asp, player, next_state.board, next_state, next_loc, recur-1)
             else:
                 if ((next_cell in [CellType.WALL, CellType.BARRIER, CellType.SPEED]) or next_cell.isdigit()):
                     score_sum += -10
                 elif next_cell in GOOD_POWERUPS:
                     score_sum += GOOD_POWERUP_WEIGHT
+                    if recur>0: #kind of weird bc actually, it will be next player
+                        score_sum += (1.0/recur)*calculate_score(asp, player, next_state.board, next_state, next_loc, recur-1)
                 else:
-                    assert next_cell == CellType.SPACE #delte l8r
-                    score_sum += 1
+                    assert next_cell == CellType.SPACE #delete l8r
+                    score_sum += 10
+                    if recur>0: 
+                        score_sum += (1.0/recur)*calculate_score(asp, player, next_state.board, next_state, next_loc, recur-1)
             
             #a state is less favourable if it is directly adjacent to walls
-            score_sum += (8 - adjacent_walls(board, loc))
-
-            #doesn't work rn
-            #if recur: #kind of weird bc actually, it will be next player
-                #score_sum += 0.5*calculate_score(asp, player, next_state.board, next_state, next_loc, False)
+            #this isn't necessarily true, bc wall-hugging can be good
+            #score_sum += (8 - adjacent_walls(board, loc))
     
     else: #NEXT move will be terminal state for player
         #print("player has no available actions")
@@ -284,24 +229,6 @@ def get_other_player(p1):
         return 1
     else:
         return 0
-
-def location_ring(loc, remove):
-    '''
-    NO LONGER USING
-    '''
-    return[(loc[0], loc[1]+remove), (loc[0], loc[1]-remove), (loc[0]+remove, loc[1]), (loc[0]-remove, loc[1])]
-
-def weight_cell(cell, op):
-    '''
-    NO LONGER USING
-    A primitive way to weight powerups
-    '''
-    if ((cell in BAD_CELLS) or (cell == op)): #not sure this second check works
-        return -POWERUP_WEIGHT
-    elif (cell in GOOD_POWERUPS):
-        return POWERUP_WEIGHT
-    else: #just a space
-        return 1
 
 def change_strategy(tron_state):
     '''
