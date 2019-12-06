@@ -15,8 +15,10 @@ from dijkstra import *
 #513/600 for cutoffply=4; playing against random bot on empty map
 # /600 for cutoffply=6; playing against random bot on empty map
 
-
-CUTOFF_PLY = 6
+#experiment w changing these
+#generally seems better to have longer ab search than more recursions
+AB_CUTOFF_PLY = 6
+CALC_SCORE_NUM_RECURSIONS = 3
 
 def get_safe_actions(state, player):
         """
@@ -108,9 +110,9 @@ def neighboring_tiles_eval_func(asp, tron_gamestate):
     op = get_other_player(ptm)
     op_loc = locs[op]
 
-    ptm_score = calculate_score(asp, ptm, board, tron_gamestate, ptm_loc, 3)
+    ptm_score = calculate_score(asp, ptm, board, tron_gamestate, ptm_loc, CALC_SCORE_NUM_RECURSIONS)
     #print("ptm score ", ptm_score)
-    op_score = calculate_score(asp, op, board, tron_gamestate, op_loc, 3)
+    op_score = calculate_score(asp, op, board, tron_gamestate, op_loc, CALC_SCORE_NUM_RECURSIONS)
     #print("op score ", op_score)
 
     return ptm_score - op_score
@@ -236,17 +238,14 @@ class StudentBot:
         """
         Input: asp, a TronProblem
         Output: A direction in {'U','D','L','R'}
-
-        To get started, you can get the current
-        state by calling asp.get_start_state()
+        To get started, you can get the current state by calling asp.get_start_state()
         """
-        #self.tronproblem = asp
         start_state = asp.get_start_state()
 
         if self.start:
-            return alpha_beta_cutoff(asp, start_state, CUTOFF_PLY, start_eval_func)
+            return alpha_beta_cutoff(asp, start_state, AB_CUTOFF_PLY, start_eval_func)
         else:
-            return alpha_beta_cutoff(asp, start_state, CUTOFF_PLY, neighboring_tiles_eval_func)
+            return alpha_beta_cutoff(asp, start_state, AB_CUTOFF_PLY, neighboring_tiles_eval_func)
 
         if self.start: 
             if change_strategy(start_state): #checks whether to change into endgame strategy
