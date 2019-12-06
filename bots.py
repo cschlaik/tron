@@ -13,7 +13,7 @@ from dijkstra import *
 #BOTS V1.3
 #493/600 for cutoffply = 3; playing against random bot on empty map
 #513/600 for cutoffply=4; playing against random bot on empty map
-# /600 for cutoffply=6; playing against random bot on empty map
+#559/600 for cutoffply=6, num_recursions=3; playing against random bot on empty map
 
 #experiment w changing these
 #generally seems better to have longer ab search than more recursions
@@ -117,9 +117,12 @@ def neighboring_tiles_eval_func(asp, tron_gamestate):
 
     return ptm_score - op_score
 
-GOOD_POWERUP_WEIGHT = 100 
+
 BAD_CELLS = [CellType.WALL, CellType.BARRIER, CellType.SPEED] #make this change w strategy
-GOOD_POWERUPS = [CellType.ARMOR, CellType.BOMB, CellType.TRAP]
+#GOOD_POWERUPS = [CellType.ARMOR, CellType.BOMB, CellType.TRAP]
+TRAP_WEIGHT = 200
+ARMOR_WEIGHT = 150
+BOMB_WEIGHT = 100 #this one is most contingent on game_state
 #DEATH_CELLS = [CellType.WALL, CellType.BARRIER]
 
 def calculate_score(asp, player, board, tron_gamestate, loc, recur):
@@ -146,36 +149,41 @@ def calculate_score(asp, player, board, tron_gamestate, loc, recur):
             next_loc = get_next_loc(loc, a) #a (x,y) tuple
             next_cell = board[next_loc[0]][next_loc[1]] # a celltype "#", "@" etc
             next_state = asp.transition(tron_gamestate, a) #a gamestate
-            
+
+            should_recur = True
+
             if next_state.player_has_armor(player):
                 if ((next_cell in [CellType.WALL, CellType.SPEED]) or next_cell.isdigit()): #isdigit should check for other player
                     score_sum += -10
-                elif next_cell in GOOD_POWERUPS:
-                    score_sum += GOOD_POWERUP_WEIGHT
-                    if recur>0: #kind of weird bc actually, it will be next player
-                        score_sum += (1.0/recur)*calculate_score(asp, player, next_state.board, next_state, next_loc, recur-1)
-                        
+                    should_recur = False
+                elif next_cell == CellType.BOMB:
+                    score_sum += BOMB_WEIGHT 
+                elif next_cell == CellType.ARMOR:
+                    score_sum += ARMOR_WEIGHT
+                elif next_cell == CellType.TRAP:
+                    score_sum += TRAP_WEIGHT
                 else: 
                     assert next_cell == CellType.SPACE or next_cell == CellType.BARRIER #delte l8r
                     score_sum += 10
-                    if recur>0:
-                        score_sum += (1.0/recur)*calculate_score(asp, player, next_state.board, next_state, next_loc, recur-1)
-                     
+
             else:
                 if ((next_cell in [CellType.WALL, CellType.BARRIER, CellType.SPEED]) or next_cell.isdigit()):
                     score_sum += -10
-                elif next_cell in GOOD_POWERUPS:
-                    score_sum += GOOD_POWERUP_WEIGHT
-                    if recur>0: 
-                        score_sum += (1.0/recur)*calculate_score(asp, player, next_state.board, next_state, next_loc, recur-1)
-                        
-                else:
+                    should_recur = False
+                elif next_cell == CellType.BOMB:
+                    score_sum += BOMB_WEIGHT 
+                elif next_cell == CellType.ARMOR:
+                    score_sum += ARMOR_WEIGHT
+                elif next_cell == CellType.TRAP:
+                    score_sum += TRAP_WEIGHT
+                else: 
                     assert next_cell == CellType.SPACE #delete l8r
                     score_sum += 10
-                    if recur>0:
-                        score_sum += (1.0/recur)*calculate_score(asp, player, next_state.board, next_state, next_loc, recur-1)
+                    
                         
-                        
+            if should_recur and recur>0:
+                score_sum += (1.0/recur)*calculate_score(asp, player, next_state.board, next_state, next_loc, recur-1)
+
             #keeps tunneling into bad spaces, trying to choose options with more space? :
             #print("safe acS len", TronProblem.get_safe_actions(board, loc))
             
