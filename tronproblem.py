@@ -348,9 +348,11 @@ class TronProblem(AdversarialSearchProblem):
             An immediate collision occurs when you run into a barrier, wall, or
             the other player
         """
+        print("board is ", board, len(board))
         safe = set()
         for action in {U, D, L, R}:
             r1, c1 = TronProblem.move(loc, action)
+            print("r1" , r1, c1)
             if not (
                 board[r1][c1] == CellType.BARRIER
                 or board[r1][c1] == CellType.WALL

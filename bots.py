@@ -143,11 +143,14 @@ def calculate_score(asp, player, board, tron_gamestate, loc, recur):
     "recur" boolean indicates whether another recursion should be performed
     '''
 
-    #check if terminal state
+    #check if current state is terminal state, meaning only one player left, meaning game is already over --> is this necessary?
     if asp.is_terminal_state(tron_gamestate):
+        print("terminal state detected") #this never seems to print
+        #self dead
         if asp.evaluate_state(tron_gamestate)[player] == 0.0:
             return(-1000)
         else:
+            #opponent dead
             return(1000)
     if tron_gamestate.get_remaining_turns_speed(player) > 0: #avoid Speeds
         return -500
@@ -172,11 +175,13 @@ def calculate_score(asp, player, board, tron_gamestate, loc, recur):
                     score_sum += GOOD_POWERUP_WEIGHT
                     if recur>0: #kind of weird bc actually, it will be next player
                         score_sum += (1.0/recur)*calculate_score(asp, player, next_state.board, next_state, next_loc, recur-1)
+                        recur -= 1 #Passing in recur - 1 never actually updates recur variable -- so i think this is necessary
                 else: 
                     assert next_cell == CellType.SPACE or next_cell == CellType.BARRIER #delte l8r
                     score_sum += 10
                     if recur>0: #kind of weird bc actually, it will be next player
                         score_sum += (1.0/recur)*calculate_score(asp, player, next_state.board, next_state, next_loc, recur-1)
+                        recur -= 1
             else:
                 if ((next_cell in [CellType.WALL, CellType.BARRIER, CellType.SPEED]) or next_cell.isdigit()):
                     score_sum += -10
@@ -184,18 +189,24 @@ def calculate_score(asp, player, board, tron_gamestate, loc, recur):
                     score_sum += GOOD_POWERUP_WEIGHT
                     if recur>0: #kind of weird bc actually, it will be next player
                         score_sum += (1.0/recur)*calculate_score(asp, player, next_state.board, next_state, next_loc, recur-1)
+                        recur -= 1
                 else:
                     assert next_cell == CellType.SPACE #delete l8r
                     score_sum += 10
-                    if recur>0: 
+                    if recur>0:
                         score_sum += (1.0/recur)*calculate_score(asp, player, next_state.board, next_state, next_loc, recur-1)
+                        recur -= 1
+                        
+            #keeps tunneling into bad spaces, trying to choose options with more space? :
+            print("safe acS len", TronProblem.get_safe_actions(board, loc))
+           # score_sum += len(TronProblem.get_safe_actions(next_state.board, next_loc))
             
             #a state is less favourable if it is directly adjacent to walls
             #this isn't necessarily true, bc wall-hugging can be good
             #score_sum += (8 - adjacent_walls(board, loc))
     
     else: #NEXT move will be terminal state for player
-        #print("player has no available actions")
+        print("player", player, " has no available actions, recur level ", recur)
         score_sum = -600 #should be less than 1000
     
     return score_sum
