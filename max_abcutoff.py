@@ -39,7 +39,7 @@ def get_safe_actions(state):
                     safe.add(action)
             return safe
 
-def alpha_beta_cutoff(asp, tron_state, cutoff_ply, eval_func):
+def max_alpha_beta_cutoff(asp, tron_state, cutoff_ply, eval_func):
     """
     This function should:
     - search through the asp using alpha-beta pruning
@@ -74,54 +74,6 @@ def alpha_beta_cutoff(asp, tron_state, cutoff_ply, eval_func):
     else:
         #print("NO MORE MOVES for player", tron_state.player_to_move())
         return 'U' #arbitrarily
-
-def min_move_ab_cutoff(asp, curr_state, move_to_here, alpha, beta, cutoff_ply, eval_func):
-    assert curr_state.ptm == 1
-    #print("min level", cutoff_ply, " move to here", move_to_here)
-    #print(TronProblem.visualize_state(curr_state, False))
-
-    
-    if asp.is_terminal_state(curr_state):
-        #print(" terminal state\n")
-        return (move_to_here, cutoff_ply*eval_func(asp, curr_state))
-    elif cutoff_ply == 0:
-        #print(" reached cutoff\n")
-        return (move_to_here, eval_func(asp, curr_state))
-    else:
-        best_action = None
-        loc = curr_state.player_locs[curr_state.ptm] 
-        actions = get_safe_actions(curr_state)
-        #print (" actions are ", actions)
-
-        if len(actions) == 0:
-            #print("min level", cutoff_ply,  "NO MORE SAFE ACTIONS for player ", curr_state.ptm)
-            #print("move to here", move_to_here)
-            best_action = (move_to_here, (cutoff_ply-1)*eval_func(asp, curr_state))
-            #print("returning ", best_action)
-            
-            return best_action
-        
-        for action in actions:
-            next_state = asp.transition(curr_state, action) 
-            if curr_state.get_remaining_turns_speed(curr_state.ptm) > 0:
-                #print("on speed")
-                result = min_move_ab_cutoff(asp, next_state, action, alpha, beta, cutoff_ply-1, eval_func)
-            else:
-                result = max_move_ab_cutoff(asp, next_state, action, alpha, beta, cutoff_ply-1, eval_func) 
-            #print("min, result is", result)
-            if not(result == None):
-                if best_action == None:
-                    best_action = (action, result[1])
-                elif (result[1] < best_action[1]): 
-                    best_action = (action, result[1])
-
-                #PRUNING
-                if (best_action[1] <= alpha):
-                   return best_action
-                if (best_action[1] < beta):
-                    beta = best_action[1]
-
-        return best_action
 
 def max_move_ab_cutoff(asp, curr_state, move_to_here, alpha, beta, cutoff_ply, eval_func):
     assert curr_state.ptm == 0
