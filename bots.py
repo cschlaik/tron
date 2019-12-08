@@ -9,18 +9,19 @@ from abcutoff import *
 from max_abcutoff import *
 from copy import deepcopy
 from dijkstra import *
+from voronoi import *
 
 # Throughout this file, ASP means adversarial search problem.
-#BOTS V1.7
+#BOTS V1.8
 
 
 #experiment w changing these
 AB_CUTOFF_PLY = 6
-CALC_SCORE_NUM_RECURSIONS = 4
+CALC_SCORE_NUM_RECURSIONS = 3
 WALL_HUG = False
-WALL_HUG_NEIGHBORING_TILES = False
+WALL_HUG_NEIGHBORING_TILES = True
 
-def get_safe_actions(board, state, player, loc, has_armor):
+def get_safe_actions_state(state, player, loc, has_armor):
         """
         FROM TRONPROBLEM, BUT TAKES INTO ACCOUNT ARMOR 
         Given a game board and a location on that board,
@@ -36,9 +37,12 @@ def get_safe_actions(board, state, player, loc, has_armor):
         changed to take in loc -- why would this change things?
         """
         safe = set()
+        board = state.board
         if has_armor:
             for action in {U, D, L, R}:
                 r1, c1 = TronProblem.move(state.player_locs[player], action) #loc
+                #assert (r1, c1) == loc
+                #assert board[r1][c1].isdigit()==TronProblem.is_cell_player(board, (r1, c1))
                 if not (
                     board[r1][c1] == CellType.WALL
                     or TronProblem.is_cell_player(board, (r1, c1))
@@ -48,6 +52,49 @@ def get_safe_actions(board, state, player, loc, has_armor):
         else:
             for action in {U, D, L, R}:
                 r1, c1 = TronProblem.move(state.player_locs[player], action)
+                #assert (r1, c1) == loc
+                #assert board[r1][c1].isdigit()==TronProblem.is_cell_player(board, (r1, c1))
+                if not (
+                    board[r1][c1] == CellType.BARRIER
+                    or board[r1][c1] == CellType.WALL
+                    or TronProblem.is_cell_player(board, (r1, c1))
+                ):
+                    safe.add(action)
+            return safe
+
+def get_safe_actions(board, player, loc, has_armor):
+        """
+        FROM TRONPROBLEM, BUT TAKES INTO ACCOUNT ARMOR 
+        Given a game board and a location on that board,
+        returns the set of actions that don't result in immediate collisions.
+        Input:
+            board- a list of lists of characters representing cells
+            loc- location (<row>, <column>) to find safe actions from
+        Output:
+            returns the set of actions that don't result in immediate collisions.
+            An immediate collision occurs when you run into a barrier, wall, or
+            the other player
+
+        changed to take in loc -- why would this change things?
+        """
+        safe = set()
+
+        if has_armor:
+            for action in {U, D, L, R}:
+                r1, c1 = loc #TronProblem.move(state.player_locs[player], action) #loc
+                #assert (r1, c1) == loc
+                #assert board[r1][c1].isdigit()==TronProblem.is_cell_player(board, (r1, c1))
+                if not (
+                    board[r1][c1] == CellType.WALL
+                    or TronProblem.is_cell_player(board, (r1, c1))
+                ):
+                    safe.add(action)
+            return safe
+        else:
+            for action in {U, D, L, R}:
+                r1, c1 = loc #TronProblem.move(state.player_locs[player], action)
+                #assert (r1, c1) == loc
+                #assert board[r1][c1].isdigit()==TronProblem.is_cell_player(board, (r1, c1))
                 if not (
                     board[r1][c1] == CellType.BARRIER
                     or board[r1][c1] == CellType.WALL
@@ -128,9 +175,9 @@ def wallhug_neighboring_tiles_eval_func(asp, tron_gamestate):
     op = get_other_player(ptm)
     op_loc = locs[op]
 
-    ptm_score = wallhug_calculate_score(asp, ptm, board, tron_gamestate, ptm_loc, 1, False)
+    ptm_score = wallhug_calculate_score(asp, ptm, board, tron_gamestate, ptm_loc, 1, tron_gamestate.player_has_armor(ptm))
     #print("ptm score ", ptm_score)
-    op_score = wallhug_calculate_score(asp, op, board, tron_gamestate, op_loc, 1, False)
+    op_score = wallhug_calculate_score(asp, op, board, tron_gamestate, op_loc, 1, tron_gamestate.player_has_armor(op))
     #print("op score ", op_score)
 
     return ptm_score - op_score
@@ -176,7 +223,6 @@ def calculate_score(asp, player, board, tron_gamestate, loc, recur, has_armor):
     "recur" > 0 indicates whether another recursion should be performed
     '''
 
-    here_has_armor = has_armor
     if asp.is_terminal_state(tron_gamestate):
         if asp.evaluate_state(tron_gamestate)[player] == 0.0:
             return(-1000)
@@ -185,16 +231,17 @@ def calculate_score(asp, player, board, tron_gamestate, loc, recur, has_armor):
     if tron_gamestate.get_remaining_turns_speed(player) > 0: #avoid Speeds
         return SPEED_WEIGHT
 
-    actions = get_safe_actions(board, tron_gamestate, player, loc, has_armor)
+    actions = get_safe_actions_state(tron_gamestate, player, loc, has_armor)
     #actions = TronProblem.get_safe_actions(board, loc)
     score_sum = 0
 
     if len(actions) > 0:
         for a in actions:
-            next_loc = get_next_loc(loc, a) #a (x,y) tuple
+            here_has_armor = has_armor
+            next_loc = TronProblem.move(loc, a)#get_next_loc(loc, a) #a (x,y) tuple
             next_cell = board[next_loc[0]][next_loc[1]] # a celltype "#", "@" etc
             next_state = asp.transition(tron_gamestate, a) #a gamestate
-
+            #assert next_loc == next_state.player_locs[player]
             #should_recur = True
             
             if (next_cell == CellType.WALL) or next_cell.isdigit(): #isdigit should check for other player
@@ -236,58 +283,61 @@ def wallhug_calculate_score(asp, player, board, tron_gamestate, loc, recur, has_
     calc scores w wallhug
     "recur" > 0 indicates whether another recursion should be performed
     '''
-    here_has_armor = has_armor
-    #print("armor", here_has_armor)
+    #print("armor", has_armor)
+
+    #THIS ALL COULD BE MOVED INTO EVALFUNC
     if asp.is_terminal_state(tron_gamestate):
         if asp.evaluate_state(tron_gamestate)[player] == 0.0:
-            #print("death for me")
-            #TronProblem.visualize_state(tron_gamestate, False)
+            assert recur==1
             return(-1000)
         else: #opponent dead
-            #print("death for opp")
-            #TronProblem.visualize_state(tron_gamestate, False)
             return(1000)
     if tron_gamestate.get_remaining_turns_speed(player) > 0: #avoid Speeds
-        return SPEED_WEIGHT
+        return SPEED_WEIGHT #this seems wrong
 
-    actions = get_safe_actions(board, tron_gamestate, player, loc, here_has_armor) 
+    actions = get_safe_actions(board, player, loc, has_armor) 
+    #actions = get_safe_actions_state(tron_gamestate, player, loc, has_armor) 
     #actions = TronProblem.get_safe_actions(board, loc)
     score_sum = 0
 
     if len(actions) > 0:
         for a in actions:
+            here_has_armor = has_armor
+
             #print("action", a)
-            next_loc = get_next_loc(loc, a) #a (x,y) tuple
+            print("curr loc", loc)
+            print("action", a)
+            next_loc = TronProblem.move(loc, a) #a (x,y) tuple
             next_cell = board[next_loc[0]][next_loc[1]] # a celltype "#", "@" etc
             next_state = asp.transition(tron_gamestate, a) #a gamestate
+            print("next loc", next_loc)
+            #print("state next loc", next_state.player_locs[player])
+            #assert next_loc == next_state.player_locs[player] #FIX THIS PROBLEM!!!!
 
-            should_recur = True
-            
+            next_board = copy.deepcopy(board)
+            next_board[loc[0]][loc[1]] = CellType.BARRIER
+            next_board[next_loc[0]][next_loc[1]] = str(player + 1)
+
+            #should_recur = True
             # if (next_cell == CellType.WALL) or next_cell.isdigit(): #isdigit should check for other player
             #     #score_sum += BAD_CELL_WEIGHT
-            #     should_recur = False
             #     continue
-            # if (next_cell == CellType.BARRIER):
-            #     if here_has_armor:
-            #         score_sum += SPACE_WEIGHT
-            #         here_has_armor = False
-            #     else:
-            #         #score_sum += BAD_CELL_WEIGHT
-            #         should_recur = False
-            #         continue
-            if asp.is_terminal_state(next_state):
-                if asp.evaluate_state(next_state)[player] == 0.0:
-                    #print("death for me")
-                   score_sum += BAD_CELL_WEIGHT
-                #should_recur = False
-                continue
+            if (next_cell == CellType.BARRIER):
+                #assert here_has_armor
+                if here_has_armor:
+                    score_sum += SPACE_WEIGHT
+                    here_has_armor = False
+                else:
+                    #score_sum += BAD_CELL_WEIGHT
+                    #this should not happen
+                    continue
 
-            next_actions_len = len(get_safe_actions(next_state.board, next_state, player, next_loc, here_has_armor)) #changed this
-            #next_actions_len = len(TronProblem.get_safe_actions(next_state.board, next_loc))
-            if (next_actions_len < 3) and (next_actions_len > 0):
-                #print("wallhug")
-                score_sum += HUG_WEIGHT
-
+            # if asp.is_terminal_state(next_state):
+            #     if asp.evaluate_state(next_state)[player] == 0.0:
+            #         #print("death for me")
+            #        score_sum += BAD_CELL_WEIGHT
+            #     #should_recur = False
+            #     continue
             
             if next_cell == CellType.SPEED:
                 score_sum += SPEED_WEIGHT 
@@ -300,10 +350,19 @@ def wallhug_calculate_score(asp, player, board, tron_gamestate, loc, recur, has_
                 score_sum += TRAP_WEIGHT
             else: #next_cell == CellType.SPACE
                 score_sum += SPACE_WEIGHT
+
+            #next_actions_len = len(get_safe_actions_state(next_state, player, next_loc, here_has_armor))
+            next_actions_len = len(get_safe_actions(next_board, player, next_loc, here_has_armor)) #changed this
+            #next_actions_len = len(TronProblem.get_safe_actions(next_state.board, next_loc))
+            if (next_actions_len < 3) and (next_actions_len > 0):
+                #assert (next_actions_len > 0)
+                #print("wallhug")
+                score_sum += HUG_WEIGHT
                     
             #print("score_sum", score_sum)        
             if recur<CALC_SCORE_NUM_RECURSIONS:
-                score_sum += (1.0/recur)*wallhug_calculate_score(asp, player, next_state.board, next_state, next_loc, recur+1, here_has_armor)
+                score_sum += (1.0/recur)*wallhug_calculate_score(asp, player, next_board, next_state, next_loc, recur+1, here_has_armor)
+                #score_sum += (1.0/recur)*wallhug_calculate_score(asp, player, next_state.board, next_state, next_state.player_locs[player], recur+1, here_has_armor)
     
     else: #NEXT move will be terminal state for player
         #print("player", player, " has no available actions, recur level ", recur)
@@ -327,13 +386,13 @@ def get_next_loc(loc, action):
     returns a tuple of location
     '''
     if action == "U":
-        return (loc[0], loc[1]-1)
-    if action == "D":
-        return (loc[0], loc[1]+1)
-    if action == "L":
         return (loc[0]-1, loc[1])
-    if action == "R":
+    if action == "D":
         return (loc[0]+1, loc[1])
+    if action == "L":
+        return (loc[0], loc[1]-1)
+    if action == "R":
+        return (loc[0], loc[1]+1)
 
 def get_other_player(p1):
     if p1 == 0:  #the other player –– always only two?
