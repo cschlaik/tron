@@ -66,20 +66,23 @@ class StudentBot:
         
         while len(frontier) > 0:
             curr_loc = frontier.pop()
-            actions = get_safe_actions_new(state.board, curr_loc, state.player_has_armor(state.ptm))
+            actions = get_safe_actions_voronoi(state.board, curr_loc)
             explored.add(curr_loc)
             for a in actions:
                 next_loc = TronProblem.move(curr_loc, a)
                 #if opponent is floodfilling in cases where walled off, this won't be executed, and will keep running till empty
+                #print("next loc ", next_loc, " seek ", seek)
                 if next_loc == seek:
-                    print("opponent is reachable")
+                    #print("opponent is reachable")
                     #break out of loop
                     return 0
                 if not(next_loc in explored):
+                    explored.add(next_loc)
                     frontier.append(next_loc)
+                    
         #number of reachable cells
         #print(player, " explored ", len(explored))
-        print("frontier exhausted, opponent is not reachable")
+        #print("frontier exhausted, opponent is not reachable")
         return len(explored)
     
     
@@ -318,6 +321,18 @@ def get_safe_actions_new(board, loc, has_armor):
             or TronProblem.is_cell_player(board, (r1, c1))
             or (board[r1][c1] == CellType.BARRIER) and not(has_armor)
         ):
+            safe.add(action)
+    return safe
+    
+def get_safe_actions_voronoi(board, loc):
+    """
+    USING FOR VORONOI ONLY
+    FROM TRONPROBLEM, BUT TAKES INTO ACCOUNT ARMOR
+    """
+    safe = set()
+    for action in {U, D, L, R}:
+        r1, c1 = TronProblem.move(loc, action)
+        if not (board[r1][c1] == CellType.WALL or board[r1][c1] == CellType.BARRIER):
             safe.add(action)
     return safe
  
