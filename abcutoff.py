@@ -29,7 +29,7 @@ def get_safe_actions(board, loc, has_armor):
             safe.add(action)
     return safe
 
-def alpha_beta_cutoff(asp, tron_state, cutoff_ply, eval_func):
+def alpha_beta_cutoff(sb, asp, tron_state, cutoff_ply, eval_func):
     """
     This function should:
     - search through the asp using alpha-beta pruning
@@ -54,7 +54,7 @@ def alpha_beta_cutoff(asp, tron_state, cutoff_ply, eval_func):
     Output: an action(an element of asp.get_available_actions(asp.get_start_state()))
     """
 
-    best_move = max_move_ab_cutoff(asp, tron_state, None,
+    best_move = max_move_ab_cutoff(sb, asp, tron_state, None,
     float("-inf"), float("inf"), cutoff_ply, eval_func)
     
     #print("********BEST MOVE", best_move, "\n")
@@ -65,7 +65,7 @@ def alpha_beta_cutoff(asp, tron_state, cutoff_ply, eval_func):
         #print("NO MORE MOVES for player", tron_state.player_to_move())
         return 'U' #arbitrarily
 
-def min_move_ab_cutoff(asp, curr_state, move_to_here, alpha, beta, cutoff_ply, eval_func):
+def min_move_ab_cutoff(sb, asp, curr_state, move_to_here, alpha, beta, cutoff_ply, eval_func):
     assert curr_state.ptm == 1 #MAKE SURE THIS IS TRUE, ELSE CHANGE 1S HERE
     #print("min level", cutoff_ply, " move to here", move_to_here)
     #print(TronProblem.visualize_state(curr_state, False))
@@ -73,10 +73,10 @@ def min_move_ab_cutoff(asp, curr_state, move_to_here, alpha, beta, cutoff_ply, e
     
     if asp.is_terminal_state(curr_state):
         #print(" terminal state\n")
-        return (move_to_here, (cutoff_ply+1)*eval_func(asp, curr_state))
+        return (move_to_here, (cutoff_ply+1)*eval_func(sb, asp, curr_state))
     elif cutoff_ply == 0:
         #print(" reached cutoff\n")
-        return (move_to_here, eval_func(asp, curr_state))
+        return (move_to_here, eval_func(sb, asp, curr_state))
     else:
         best_action = None
         loc = curr_state.player_locs[1] 
@@ -86,7 +86,7 @@ def min_move_ab_cutoff(asp, curr_state, move_to_here, alpha, beta, cutoff_ply, e
         if len(actions) == 0:
             #print("min level", cutoff_ply,  "NO MORE SAFE ACTIONS for player ", curr_state.ptm)
             #print("move to here", move_to_here)
-            best_action = (move_to_here, cutoff_ply*eval_func(asp, curr_state))
+            best_action = (move_to_here, cutoff_ply*eval_func(sb, asp, curr_state))
             #print("returning ", best_action)
             
             return best_action
@@ -94,10 +94,10 @@ def min_move_ab_cutoff(asp, curr_state, move_to_here, alpha, beta, cutoff_ply, e
         for action in actions:
             next_state = asp.transition(curr_state, action) 
             if curr_state.get_remaining_turns_speed(curr_state.ptm) > 0:
-                #print("on speed")
-                result = min_move_ab_cutoff(asp, next_state, action, alpha, beta, cutoff_ply-1, eval_func)
+                #print("player 2 (op) on speed, turns ", curr_state.get_remaining_turns_speed(curr_state.ptm))
+                result = min_move_ab_cutoff(sb, asp, next_state, action, alpha, beta, cutoff_ply-1, eval_func)
             else:
-                result = max_move_ab_cutoff(asp, next_state, action, alpha, beta, cutoff_ply-1, eval_func) 
+                result = max_move_ab_cutoff(sb, asp, next_state, action, alpha, beta, cutoff_ply-1, eval_func) 
             #print("min, result is", result)
             if not(result == None):
                 if best_action == None:
@@ -113,16 +113,16 @@ def min_move_ab_cutoff(asp, curr_state, move_to_here, alpha, beta, cutoff_ply, e
 
         return best_action
 
-def max_move_ab_cutoff(asp, curr_state, move_to_here, alpha, beta, cutoff_ply, eval_func):
+def max_move_ab_cutoff(sb, asp, curr_state, move_to_here, alpha, beta, cutoff_ply, eval_func):
     #print("\nmax level", cutoff_ply, " move to here", move_to_here) 
     #print(TronProblem.visualize_state(curr_state, False))
 
     if asp.is_terminal_state(curr_state):
         #print(" terminal state\n")
-        return (move_to_here, (cutoff_ply+1)*eval_func(asp, curr_state))
+        return (move_to_here, (cutoff_ply+1)*eval_func(sb, asp, curr_state))
     elif cutoff_ply == 0:
         #print(" reached cutoff\n")
-        return (move_to_here, eval_func(asp, curr_state))
+        return (move_to_here, eval_func(sb, asp, curr_state))
     else:
         best_action = None
         loc = curr_state.player_locs[0]
@@ -131,7 +131,7 @@ def max_move_ab_cutoff(asp, curr_state, move_to_here, alpha, beta, cutoff_ply, e
 
         if len(actions) == 0:
             #print("max level", cutoff_ply,  "NO MORE SAFE ACTIONS for player ", curr_state.ptm)
-            best_action = (move_to_here, cutoff_ply*eval_func(asp, curr_state)) #CHANGE THIS
+            best_action = (move_to_here, cutoff_ply*eval_func(sb, asp, curr_state)) #CHANGE THIS
             #print("returning ", best_action)    
             return best_action
 
@@ -139,10 +139,10 @@ def max_move_ab_cutoff(asp, curr_state, move_to_here, alpha, beta, cutoff_ply, e
             #print("action", action)
             next_state = asp.transition(curr_state, action)
             if curr_state.get_remaining_turns_speed(curr_state.ptm) > 0: #correct!?
-                #print("on speed")
-                result = max_move_ab_cutoff(asp, next_state, action, alpha, beta, cutoff_ply-1, eval_func)
+                #print("player 1 (op) on speed, turns ", curr_state.get_remaining_turns_speed(curr_state.ptm))
+                result = max_move_ab_cutoff(sb, asp, next_state, action, alpha, beta, cutoff_ply-1, eval_func)
             else:
-                result = min_move_ab_cutoff(asp, next_state, action, alpha, beta, cutoff_ply-1, eval_func)
+                result = min_move_ab_cutoff(sb, asp, next_state, action, alpha, beta, cutoff_ply-1, eval_func)
             #print("max, level", cutoff_ply, "result is", result)
             if not(result == None):
                 if best_action == None:
