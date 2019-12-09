@@ -39,8 +39,8 @@ def voronoi(asp, state, ptm, op, ptm_loc, op_loc):
     
     #changed from and to or
     while not(len(ptm_frontier) == 0) or not(len(ptm_frontier) == 0):
-        (ptm_frontier, ptm_explored) = helper(state, ptm_frontier, ptm_explored, op_frontier, op_explored)
-        (op_frontier, op_explored) = helper(state, op_frontier, op_explored, ptm_frontier, ptm_explored)
+        (ptm_frontier, ptm_explored, ptm_level) = helper(state, ptm_frontier, ptm_explored, op_frontier, op_explored)
+        (op_frontier, op_explored, op_level) = helper(state, op_frontier, op_explored, ptm_frontier, ptm_explored)
         
         #how to iterate both through our actions and opponent's actions at the same time??
         #not sure this solution works / wouldn't lead to concurrency problems 
@@ -75,9 +75,9 @@ def helper(state, my_frontier, my_explored, op_frontier, op_explored):
         my_explored.append(curr_loc)
         for a in actions:
             next_loc = TronProblem.move(curr_loc, a)
-            level += 1
             if not(next_loc in my_explored):
                 my_frontier.append(next_loc)
+        level += 1
         return (my_frontier, my_explored, level)
     
     
