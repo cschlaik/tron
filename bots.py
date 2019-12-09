@@ -44,19 +44,11 @@ class StudentBot:
         ptm_frontier.append(ptm_loc)
         op_frontier = []
         op_frontier.append(op_loc)
-        ptm_distances = {}
-        ptm_distances[ptm_loc] = 0
-        op_distances = {}
-        op_distances[op_loc] = 0
-        ptm_score = 0
-        op_score = 0
         
         pathDistDict = {}
         pathDistDict[ptm_loc] = (0, 0)
         pathDistDict[op_loc] = (0, 0)
         total_score = 0
-        
-        #t0 = time.time()
         level = 0
 
         #changed from and to or
@@ -72,22 +64,9 @@ class StudentBot:
             #print("AFTER ptm CALL")
             #print("op eval")
             (op_frontier, op_explored, pathDistDict) = StudentBot.helper(state, op_frontier, op_explored, pathDistDict, op)
-           #print("AFTER op CALL")
-            #print("op explor ", len(op_explored))
-            #how to iterate both through our actions and opponent's actions at the same time??
-            #not sure this solution works / wouldn't lead to concurrency problems 
-            #(i.e, both loops editing the same frontier or explored at the same time)
-
-            #might be ok, since they should only be touching their own frontiers in each?
-            # print(time.time() - t0)
-            # if (time.time() - t0) > 0.2:
-            #     print("*******************************************************timeout")
-            #     return ptm_score - op_score
             level += 1
         #print(level)
-#        print("ptm explored ", len(ptm_explored) , " op explored ", len(op_explored))
-        #keep track of depth of bfs, use as score/path length
-        #return len(ptm_explored) - len(op_explored)
+
         for loc in pathDistDict:
         #ptm path disctance to loc - op path dist to loc
             total_score += pathDistDict[loc][0] - pathDistDict[loc][1]
@@ -98,15 +77,13 @@ class StudentBot:
        
         if my_frontier:
            curr_loc = my_frontier.pop()
-           #score += distances[curr_loc]
-           actions = get_safe_actions_new(state.board, curr_loc, state.player_has_armor(state.ptm)) #TronProblem.get_safe_actions(state.board, curr_loc) #
+           actions = get_safe_actions_new(state.board, curr_loc, state.player_has_armor(player)) #TronProblem.get_safe_actions(state.board, curr_loc) #
            my_explored.add(curr_loc)
            for a in actions:
             next_loc = TronProblem.move(curr_loc, a)
             
             #a player has already looked at this loc
             if not(next_loc in my_explored):
-                
                 #distances[next_loc] = (distances[curr_loc] + 1)
                 if next_loc in pathDistDict:
                     #ptms turn, op has already been here
