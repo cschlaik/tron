@@ -350,7 +350,6 @@ class TronProblem(AdversarialSearchProblem):
         """
         safe = set()
         for action in {U, D, L, R}:
-            #print("getsafe", TronProblem.move(loc, action))
             r1, c1 = TronProblem.move(loc, action)
             if not (
                 board[r1][c1] == CellType.BARRIER

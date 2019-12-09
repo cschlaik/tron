@@ -15,7 +15,7 @@ from dijkstra import *
 
 
 #experiment w changing these
-AB_CUTOFF_PLY = 5
+AB_CUTOFF_PLY = 4
 CALC_SCORE_NUM_RECURSIONS = 3
 WALL_HUG = False
 WALL_HUG_NEIGHBORING_TILES = True
@@ -47,16 +47,15 @@ def voronoi(asp, state, ptm, op, ptm_loc, op_loc):
     op_score = 0
     
     #changed from and to or
-
     while not(len(ptm_frontier) == 0) or not(len(op_frontier) == 0):
        # print("ptm eval")
         #is duplicate name a problem
        # print("BEFORE CALL op dist ", op_distances.keys())
+
         (ptm_frontier, ptm_explored, ptm_distances, ptm_score) = helper(state, ptm_frontier, ptm_explored, ptm_distances, ptm_score)
         #print("AFTER CALL op dist ", op_distances.keys())
         #print("op eval")
         (op_frontier, op_explored, op_distances, op_score) = helper(state, op_frontier, op_explored, op_distances, op_score)
-
         
         #how to iterate both through our actions and opponent's actions at the same time??
         #not sure this solution works / wouldn't lead to concurrency problems 
@@ -76,7 +75,7 @@ def helper(state, my_frontier, my_explored, distances, score):
     #MOVE THIS, pass around?
     #cumulativeDists = 0
    
-    while my_frontier:
+    if my_frontier:
        curr_loc = my_frontier.pop()
        #print("curr loc ", curr_loc)
        #when should this be incremented?
@@ -84,14 +83,13 @@ def helper(state, my_frontier, my_explored, distances, score):
        actions = TronProblem.get_safe_actions(state.board, curr_loc)
        my_explored.append(curr_loc)
        for a in actions:
-           next_loc = TronProblem.move(curr_loc, a)
-           if not(next_loc in my_explored):
-               distances[next_loc] = (distances[curr_loc] + 1)
-               #print("keys ", distances.keys())
-               distances[next_loc] = (distances[curr_loc] + 1)
+        next_loc = TronProblem.move(curr_loc, a)
+        if not(next_loc in my_explored):
+            distances[next_loc] = (distances[curr_loc] + 1)
+            #print("keys ", distances.keys())
+            distances[next_loc] = (distances[curr_loc] + 1)
                #print("next loc dist ", distances[next_loc])
-               my_frontier.append(next_loc)
-
+            my_frontier.append(next_loc)
     return (my_frontier, my_explored, distances, score)
        
     #new_my_frontier = set()
