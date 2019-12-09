@@ -35,19 +35,27 @@ def voronoi(asp, state, ptm, op, ptm_loc, op_loc):
     ptm_frontier = []
     ptm_frontier.append(ptm_loc)
     op_frontier = []
-    op_frontier.append(ptm_loc)
+    op_frontier.append(op_loc)
     ptm_distances = {}
     ptm_distances[ptm_loc] = 0
-    print("ptm loc ", ptm_loc)
+#    print("ptm loc ", ptm_loc)
+#    print("op loc ", op_loc)
     #print("dict has key ", ptm_distances.has_key(ptm_loc))
     op_distances = {}
     op_distances[op_loc] = 0
+    ptm_score = 0
+    op_score = 0
     
     #changed from and to or
 
-    while not(len(ptm_frontier) == 0) or not(len(ptm_frontier) == 0):
-        (ptm_frontier, ptm_explored) = helper(state, ptm_frontier, ptm_explored, ptm_distances)
-        (op_frontier, op_explored) = helper(state, op_frontier, op_explored, op_distances)
+    while not(len(ptm_frontier) == 0) or not(len(op_frontier) == 0):
+       # print("ptm eval")
+        #is duplicate name a problem
+       # print("BEFORE CALL op dist ", op_distances.keys())
+        (ptm_frontier, ptm_explored, ptm_distances, ptm_score) = helper(state, ptm_frontier, ptm_explored, ptm_distances, ptm_score)
+        #print("AFTER CALL op dist ", op_distances.keys())
+        #print("op eval")
+        (op_frontier, op_explored, op_distances, op_score) = helper(state, op_frontier, op_explored, op_distances, op_score)
 
         
         #how to iterate both through our actions and opponent's actions at the same time??
@@ -57,26 +65,34 @@ def voronoi(asp, state, ptm, op, ptm_loc, op_loc):
         #might be ok, since they should only be touching their own frontiers in each?
 
     #keep track of depth of bfs, use as score/path length
-    return len(ptm_explored) - len(op_explored)
+    #return len(ptm_explored) - len(op_explored)
+#    print("ptm score " , ptm_score)
+#    print("op_score ", op_score)
+    return ptm_score - op_score
 
-def helper(state, my_frontier, my_explored, distances):
-    
-    print("keys ", distances.keys()
-    cumulativeDists = 0
+def helper(state, my_frontier, my_explored, distances, score):
+    #print("frontier ", my_frontier)
+    #print("keys ", distances.keys())
+    #MOVE THIS, pass around?
+    #cumulativeDists = 0
    
     while my_frontier:
        curr_loc = my_frontier.pop()
+       #print("curr loc ", curr_loc)
        #when should this be incremented?
-       cumulativeDists += distances[curr_loc]
+       score += distances[curr_loc]
        actions = TronProblem.get_safe_actions(state.board, curr_loc)
        my_explored.append(curr_loc)
        for a in actions:
            next_loc = TronProblem.move(curr_loc, a)
            if not(next_loc in my_explored):
                distances[next_loc] = (distances[curr_loc] + 1)
-               print("next loc dist ", distances[next_loc])
+               #print("keys ", distances.keys())
+               distances[next_loc] = (distances[curr_loc] + 1)
+               #print("next loc dist ", distances[next_loc])
                my_frontier.append(next_loc)
-       return (my_frontier, my_explored)
+
+    return (my_frontier, my_explored, distances, score)
        
     #new_my_frontier = set()
 
