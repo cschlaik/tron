@@ -58,15 +58,10 @@ def alpha_beta_cutoff(sb, asp, tron_state, cutoff_ply, eval_func):
     float("-inf"), float("inf"), cutoff_ply, eval_func)
     
     #print("********BEST MOVE", best_move, "\n")
-    assert not(best_move == None)
-    if not(best_move == None):
-        return best_move[0]
-    else:
-        #print("NO MORE MOVES for player", tron_state.player_to_move())
-        return 'U' #arbitrarily
+    return best_move[0]
 
 def min_move_ab_cutoff(sb, asp, curr_state, move_to_here, alpha, beta, cutoff_ply, eval_func):
-    assert curr_state.ptm == 1 #MAKE SURE THIS IS TRUE, ELSE CHANGE 1S HERE
+    #assert curr_state.ptm == 1 #will be true
     #print("min level", cutoff_ply, " move to here", move_to_here)
     #print(TronProblem.visualize_state(curr_state, False))
 
