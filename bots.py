@@ -37,9 +37,9 @@ class StudentBot:
         '''
         returns how much space ptm has vs how much space op has.
         '''
-
-        ptm_explored = []
-        op_explored = []
+        
+        ptm_explored = set()
+        op_explored = set()
         ptm_frontier = []
         ptm_frontier.append(ptm_loc)
         op_frontier = []
@@ -51,21 +51,29 @@ class StudentBot:
         ptm_score = 0
         op_score = 0
         
-
+        pathDistDict = {}
+        pathDistDict[ptm_loc] = (0, 0)
+        pathDistDict[op_loc] = (0, 0)
+        total_score = 0
+        
         #t0 = time.time()
         level = 0
 
         #changed from and to or
-        while (not(len(ptm_frontier) == 0) or not(len(op_frontier) == 0)) and (level<VORONOI_LEVEL_CUTOFF):
+#        while (not(len(ptm_frontier) == 0) or not(len(op_frontier) == 0)) and (level<VORONOI_LEVEL_CUTOFF):
+        while (not(len(ptm_frontier) == 0) or not(len(op_frontier) == 0)):
+            #print("ptm f len ", len(ptm_frontier), " op f len ", len(op_frontier))
            # print("ptm eval")
             #is duplicate name a problem
-           # print("BEFORE CALL op dist ", op_distances.keys())
+            #print("BEFORE ptm CALL")
 
-            (ptm_frontier, ptm_explored, ptm_distances, ptm_score) = StudentBot.helper(state, ptm_frontier, ptm_explored, ptm_distances, ptm_score)
-            #print("AFTER CALL op dist ", op_distances.keys())
+            (ptm_frontier, ptm_explored, pathDistDict) = StudentBot.helper(state, ptm_frontier, ptm_explored, pathDistDict, ptm)
+            #print("ptm explor ", len(ptm_explored))
+            #print("AFTER ptm CALL")
             #print("op eval")
-            (op_frontier, op_explored, op_distances, op_score) = StudentBot.helper(state, op_frontier, op_explored, op_distances, op_score)
-            
+            (op_frontier, op_explored, pathDistDict) = StudentBot.helper(state, op_frontier, op_explored, pathDistDict, op)
+           #print("AFTER op CALL")
+            #print("op explor ", len(op_explored))
             #how to iterate both through our actions and opponent's actions at the same time??
             #not sure this solution works / wouldn't lead to concurrency problems 
             #(i.e, both loops editing the same frontier or explored at the same time)
@@ -76,35 +84,41 @@ class StudentBot:
             #     print("*******************************************************timeout")
             #     return ptm_score - op_score
             level += 1
-            #print(level)
-
+        #print(level)
+#        print("ptm explored ", len(ptm_explored) , " op explored ", len(op_explored))
         #keep track of depth of bfs, use as score/path length
         #return len(ptm_explored) - len(op_explored)
-        #print("ptm score " , ptm_score)
-        #print("op_score ", op_score)
-        return ptm_score - op_score
+        for loc in pathDistDict:
+        #ptm path disctance to loc - op path dist to loc
+            total_score += pathDistDict[loc][0] - pathDistDict[loc][1]
+            
+        return total_score
 
-    def helper(state, my_frontier, my_explored, distances, score):
-        #print("frontier ", my_frontier)
-        #print("keys ", distances.keys())
-        #MOVE THIS, pass around?
-        #cumulativeDists = 0
+    def helper(state, my_frontier, my_explored, pathDistDict, player):
        
         if my_frontier:
            curr_loc = my_frontier.pop()
-           #print("curr loc ", curr_loc)
-           #when should this be incremented?
-           score += distances[curr_loc]
+           #score += distances[curr_loc]
            actions = get_safe_actions_new(state.board, curr_loc, state.player_has_armor(state.ptm)) #TronProblem.get_safe_actions(state.board, curr_loc) #
-           my_explored.append(curr_loc)
+           my_explored.add(curr_loc)
            for a in actions:
             next_loc = TronProblem.move(curr_loc, a)
+            
+            #a player has already looked at this loc
             if not(next_loc in my_explored):
-                distances[next_loc] = (distances[curr_loc] + 1)
-                #print("keys ", distances.keys())
-                   #print("next loc dist ", distances[next_loc])
+                
+                #distances[next_loc] = (distances[curr_loc] + 1)
+                if next_loc in pathDistDict:
+                    #ptms turn, op has already been here
+                    if player == 0:
+                        pathDistDict[next_loc] = ((pathDistDict[curr_loc][0] + 1), pathDistDict[next_loc][1])
+                    #op's turn, ptm already been here
+                    elif player == 1:
+                        pathDistDict[next_loc] = (pathDistDict[next_loc][0], (pathDistDict[curr_loc][1] + 1))
+                        
                 my_frontier.append(next_loc)
-        return (my_frontier, my_explored, distances, score)
+            #print(len(my_explored))
+        return (my_frontier, my_explored, pathDistDict)
 
     def weighted_voronoi_eval_func(sb, asp, tron_gamestate):
         locs = tron_gamestate.player_locs
