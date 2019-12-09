@@ -4,40 +4,30 @@ from trontypes import CellType, PowerupType
 import random, math
 from queue import Queue, LifoQueue, PriorityQueue
 
-def get_safe_actions(state):
-        """
-        FROM TRONPROBLEM, BUT TAKES INTO ACCOUNT ARMOR 
-        Given a game board and a location on that board,
+def get_safe_actions(board, loc, has_armor):
+    """
+    USING FOR VORONOI ONLY
+    FROM TRONPROBLEM, BUT TAKES INTO ACCOUNT ARMOR 
+    Given a game board and a location on that board,
+    returns the set of actions that don't result in immediate collisions.
+    Input:
+        board- a list of lists of characters representing cells
+        loc- location (<row>, <column>) to find safe actions from
+    Output:
         returns the set of actions that don't result in immediate collisions.
-        Input:
-            board- a list of lists of characters representing cells
-            loc- location (<row>, <column>) to find safe actions from
-        Output:
-            returns the set of actions that don't result in immediate collisions.
-            An immediate collision occurs when you run into a barrier, wall, or
-            the other player
-        """
-        safe = set()
-        if state.player_has_armor(state.ptm):
-
-            for action in {U, D, L, R}:
-                r1, c1 = TronProblem.move(state.player_locs[state.ptm], action)
-                if not (
-                    state.board[r1][c1] == CellType.WALL
-                    or TronProblem.is_cell_player(state.board, (r1, c1))
-                ):
-                    safe.add(action)
-            return safe
-        else:
-            for action in {U, D, L, R}:
-                r1, c1 = TronProblem.move(state.player_locs[state.ptm], action)
-                if not (
-                    state.board[r1][c1] == CellType.BARRIER
-                    or state.board[r1][c1] == CellType.WALL
-                    or TronProblem.is_cell_player(state.board, (r1, c1))
-                ):
-                    safe.add(action)
-            return safe
+        An immediate collision occurs when you run into a barrier, wall, or
+        the other player
+    """
+    safe = set()
+    for action in {U, D, L, R}:
+        r1, c1 = TronProblem.move(loc, action)
+        if not (
+            board[r1][c1] == CellType.WALL
+            or TronProblem.is_cell_player(board, (r1, c1))
+            or (board[r1][c1] == CellType.BARRIER) and not(has_armor)
+        ):
+            safe.add(action)
+    return safe
 
 def alpha_beta_cutoff(asp, tron_state, cutoff_ply, eval_func):
     """
@@ -76,7 +66,7 @@ def alpha_beta_cutoff(asp, tron_state, cutoff_ply, eval_func):
         return 'U' #arbitrarily
 
 def min_move_ab_cutoff(asp, curr_state, move_to_here, alpha, beta, cutoff_ply, eval_func):
-    assert curr_state.ptm == 1
+    assert curr_state.ptm == 1 #MAKE SURE THIS IS TRUE, ELSE CHANGE 1S HERE
     #print("min level", cutoff_ply, " move to here", move_to_here)
     #print(TronProblem.visualize_state(curr_state, False))
 
@@ -89,8 +79,8 @@ def min_move_ab_cutoff(asp, curr_state, move_to_here, alpha, beta, cutoff_ply, e
         return (move_to_here, eval_func(asp, curr_state))
     else:
         best_action = None
-        loc = curr_state.player_locs[curr_state.ptm] 
-        actions = TronProblem.get_safe_actions(curr_state.board, curr_state.player_locs[curr_state.ptm])#get_safe_actions(curr_state)
+        loc = curr_state.player_locs[1] 
+        actions = get_safe_actions(curr_state.board, loc, curr_state.player_has_armor(1))
         #print (" actions are ", actions)
 
         if len(actions) == 0:
@@ -135,8 +125,8 @@ def max_move_ab_cutoff(asp, curr_state, move_to_here, alpha, beta, cutoff_ply, e
         return (move_to_here, eval_func(asp, curr_state))
     else:
         best_action = None
-        loc = curr_state.player_locs[curr_state.ptm]
-        actions = TronProblem.get_safe_actions(curr_state.board, curr_state.player_locs[curr_state.ptm])#get_safe_actions(curr_state)
+        loc = curr_state.player_locs[0]
+        actions = get_safe_actions(curr_state.board, loc, curr_state.player_has_armor(0))
         #print (" actions are ", actions)
 
         if len(actions) == 0:

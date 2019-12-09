@@ -7,28 +7,25 @@ import random, math
 from queue import Queue, LifoQueue, PriorityQueue
 from abcutoff import *
 from copy import deepcopy
-from dijkstra import *
-#from voronoi import *
+import time
 
 # Throughout this file, ASP means adversarial search problem.
-#BOTS V1.8
-
+#BOTS V2
+#added consideration of armor (get_safe_actions_new)
 
 #experiment w changing these
 AB_CUTOFF_PLY = 4
 CALC_SCORE_NUM_RECURSIONS = 3
 WALL_HUG = False
-WALL_HUG_NEIGHBORING_TILES = True
-VORONOI = True
+WALL_HUG_NEIGHBORING_TILES = False
+VORONOI = False
+WEIGHTED_VORONOI = True #adds the calc_score eval func
+VORONOI_LEVEL_CUTOFF = 50 
 
 def voronoi(asp, state, ptm, op, ptm_loc, op_loc):
     '''
     returns how much space ptm has vs how much space op has.
     '''
-#    ptm_explored = set()
-#    op_explored = set()
-#    ptm_frontier = set([ptm_loc])
-#    op_frontier = set([op_loc])
 
     ptm_explored = []
     op_explored = []
@@ -47,7 +44,9 @@ def voronoi(asp, state, ptm, op, ptm_loc, op_loc):
     op_score = 0
     
     #changed from and to or
-    while not(len(ptm_frontier) == 0) or not(len(op_frontier) == 0):
+    #t0 = time.time()
+    level = 0
+    while (not(len(ptm_frontier) == 0) or not(len(op_frontier) == 0)) and (level<VORONOI_LEVEL_CUTOFF):
        # print("ptm eval")
         #is duplicate name a problem
        # print("BEFORE CALL op dist ", op_distances.keys())
@@ -62,6 +61,12 @@ def voronoi(asp, state, ptm, op, ptm_loc, op_loc):
         #(i.e, both loops editing the same frontier or explored at the same time)
 
         #might be ok, since they should only be touching their own frontiers in each?
+        # print(time.time() - t0)
+        # if (time.time() - t0) > 0.2:
+        #     print("*******************************************************timeout")
+        #     return ptm_score - op_score
+        level += 1
+        #print(level)
 
     #keep track of depth of bfs, use as score/path length
     #return len(ptm_explored) - len(op_explored)
@@ -80,38 +85,33 @@ def helper(state, my_frontier, my_explored, distances, score):
        #print("curr loc ", curr_loc)
        #when should this be incremented?
        score += distances[curr_loc]
-       actions = TronProblem.get_safe_actions(state.board, curr_loc)
+       actions = get_safe_actions_new(state.board, curr_loc, state.player_has_armor(state.ptm)) #TronProblem.get_safe_actions(state.board, curr_loc) #
        my_explored.append(curr_loc)
        for a in actions:
         next_loc = TronProblem.move(curr_loc, a)
         if not(next_loc in my_explored):
             distances[next_loc] = (distances[curr_loc] + 1)
             #print("keys ", distances.keys())
-            distances[next_loc] = (distances[curr_loc] + 1)
                #print("next loc dist ", distances[next_loc])
             my_frontier.append(next_loc)
     return (my_frontier, my_explored, distances, score)
-       
-    #new_my_frontier = set()
 
-#    if len(my_frontier) > 0:
-#        for loc in my_frontier:
-#            actions = TronProblem.get_safe_actions(state.board, loc)
-#            my_explored.add(loc)
-#            for a in actions:
-#                # i think we should write a function that simulates move, bc TronProblem.move actually moves the player?
-#                next_loc = TronProblem.move(loc, a)
-#                level += 1
-#                if not(next_loc in op_explored):
-#                    new_my_frontier.add(next_loc)
-#        return (new_my_frontier, my_explored)
-#
-
-
-    
-
-    
-
+def get_safe_actions_new(board, loc, has_armor):
+    """
+    USING FOR VORONOI ONLY
+    FROM TRONPROBLEM, BUT TAKES INTO ACCOUNT ARMOR 
+    """
+    safe = set()
+    for action in {U, D, L, R}:
+        r1, c1 = TronProblem.move(loc, action)
+        if not (
+            board[r1][c1] == CellType.WALL
+            or TronProblem.is_cell_player(board, (r1, c1))
+            or (board[r1][c1] == CellType.BARRIER) and not(has_armor)
+        ):
+            safe.add(action)
+    return safe
+ 
 def get_safe_actions_state(state, player, loc, has_armor):
         """
         FROM TRONPROBLEM, BUT TAKES INTO ACCOUNT ARMOR 
@@ -298,6 +298,23 @@ def neighboring_tiles_eval_func(asp, tron_gamestate):
 
     return ptm_score - op_score
 
+def weighted_voronoi_eval_func(asp, tron_gamestate):
+    locs = tron_gamestate.player_locs
+    
+    #the player to move
+    ptm = tron_gamestate.ptm 
+    ptm_loc = locs[ptm]
+    op = get_other_player(ptm)
+    op_loc = locs[op]
+    board = tron_gamestate.board
+
+    weight_ptm = calculate_score(asp, ptm, board, tron_gamestate, ptm_loc, 1, tron_gamestate.player_has_armor(ptm))
+    weight_op = calculate_score(asp, op, board, tron_gamestate, op_loc, 1, tron_gamestate.player_has_armor(op))
+    v = voronoi(asp, tron_gamestate, ptm, op, ptm_loc, op_loc)
+    print("w", weight_ptm-weight_op)
+    print("v", v)
+    return v+(weight_ptm-weight_op)
+
 def voronoi_eval_func(asp, tron_gamestate):
     locs = tron_gamestate.player_locs
     
@@ -344,11 +361,9 @@ def calculate_score(asp, player, board, tron_gamestate, loc, recur, has_armor):
             next_cell = board[next_loc[0]][next_loc[1]] # a celltype "#", "@" etc
             next_state = asp.transition(tron_gamestate, a) #a gamestate
             #assert next_loc == next_state.player_locs[player]
-            #should_recur = True
             
             if (next_cell == CellType.WALL) or next_cell.isdigit(): #isdigit should check for other player
                 score_sum += BAD_CELL_WEIGHT
-                #should_recur = False
                 continue
             elif (next_cell == CellType.BARRIER):
                 if here_has_armor:
@@ -356,7 +371,6 @@ def calculate_score(asp, player, board, tron_gamestate, loc, recur, has_armor):
                     here_has_armor = False
                 else:
                     score_sum += BAD_CELL_WEIGHT
-                    #should_recur = False
                     continue
             elif next_cell == CellType.SPEED:
                 score_sum += SPEED_WEIGHT 
@@ -528,12 +542,14 @@ class StudentBot:
         start_state = asp.get_start_state()
         if VORONOI:
             return alpha_beta_cutoff(asp, start_state, AB_CUTOFF_PLY, voronoi_eval_func)
+        elif WEIGHTED_VORONOI:
+            return alpha_beta_cutoff(asp, start_state, AB_CUTOFF_PLY, weighted_voronoi_eval_func)
 
-        if self.first_turn and WALL_HUG:
-            self.divider_board = determine_divider_board(start_state.board)
-            if self.divider_board:
-                print("DIVIDER BOARD")
-            self.first_turn = False
+        # if self.first_turn and WALL_HUG:
+        #     self.divider_board = determine_divider_board(start_state.board)
+        #     if self.divider_board:
+        #         print("DIVIDER BOARD")
+        #     self.first_turn = False
 
         if self.divider_board or WALL_HUG:
             order = ["U", "D", "L", "R"]
