@@ -7,49 +7,30 @@ from abcutoff import *
 from max_abcutoff import *
 from copy import deepcopy
 from dijkstra import *
+# @static
+# def altVoronoi(asp, state, ptm, op, ptm_loc, op_loc):
 
-def helper(state, my_frontier, my_explored, op_frontier, op_explored):
-	new_my_frontier = {}
-    #check not empty
-    if len(my_frontier) > 0 :
-        for loc in my_frontier:
-            actions = TronProblem.get_safe_actions(state.board, loc)
-            my_explored.add(loc)
-            for a in actions:
-                # i think we should write a function that simulates move, bc TronProblem.move actually moves the player?
-                next_loc = TronProblem.move(loc, a)
-                if not(next_loc in op_explored):
-                    my_frontier.add(next_loc)
-        return (new_my_frontier, my_explored)
+#     ptm_explored = {}
+#     op_explored = {}
+#     ptm_frontier = {ptm_loc}
+#     op_frontier = {op_loc}
     
-    #what to return if frontier empty?
-    return {}
-    
-@static
-def altVoronoi(asp, state, ptm, op, ptm_loc, op_loc):
-
-    ptm_explored = {}
-    op_explored = {}
-    ptm_frontier = {ptm_loc}
-    op_frontier = {op_loc}
-    
-    while not(len(ptm_frontier) == 0) or not(len(ptm_frontier) == 0):
-    new_my_frontier = {}
-    new_op_fronier = {}
-    #check not empty
-        for loc in ptm_frontier:
-            actions = TronProblem.get_safe_actions(state.board, loc)
-            my_explored.add(loc)
-            for a in actions:
-                # i think we should write a function that simulates move, bc TronProblem.move actually moves the player?
-                next_loc = TronProblem.move(loc, a)
-                if not(next_loc in op_explored):
-                    my_frontier.add(next_loc)
-        return (new_my_frontier, my_explored)
-    }
-    #what to return if frontier empty?
-    return {}
-    
+#     while not(len(ptm_frontier) == 0) or not(len(ptm_frontier) == 0):
+#     new_my_frontier = {}
+#     new_op_fronier = {}
+#     #check not empty
+#         for loc in ptm_frontier:
+#             actions = TronProblem.get_safe_actions(state.board, loc)
+#             my_explored.add(loc)
+#             for a in actions:
+#                 # i think we should write a function that simulates move, bc TronProblem.move actually moves the player?
+#                 next_loc = TronProblem.move(loc, a)
+#                 if not(next_loc in op_explored):
+#                     my_frontier.add(next_loc)
+#         return (new_my_frontier, my_explored)
+#     }
+#     #what to return if frontier empty?
+#     return {}
 def voronoi(asp, state, ptm, op, ptm_loc, op_loc):
 	'''
 	returns how much space ptm has vs how much space op has.
@@ -72,4 +53,19 @@ def voronoi(asp, state, ptm, op, ptm_loc, op_loc):
         
 	return len(ptm_explored) - len(op_explored)
 
-	
+def helper(state, my_frontier, my_explored, op_frontier, op_explored):
+    new_my_frontier = set()
+
+    if len(my_frontier) > 0:
+        for loc in my_frontier:
+            actions = TronProblem.get_safe_actions(state.board, loc)
+            my_explored.add(loc)
+            for a in actions:
+                # i think we should write a function that simulates move, bc TronProblem.move actually moves the player?
+                next_loc = TronProblem.move(loc, a)
+                if not(next_loc in op_explored):
+                    my_frontier.add(next_loc)
+        return (new_my_frontier, my_explored)
+    
+    #what to return if frontier empty?
+    return (None, None)
