@@ -36,12 +36,18 @@ def voronoi(asp, state, ptm, op, ptm_loc, op_loc):
     ptm_frontier.append(ptm_loc)
     op_frontier = []
     op_frontier.append(ptm_loc)
+    ptm_distances = {}
+    ptm_distances[ptm_loc] = 0
+    print("ptm loc ", ptm_loc)
+    #print("dict has key ", ptm_distances.has_key(ptm_loc))
+    op_distances = {}
+    op_distances[op_loc] = 0
     
     #changed from and to or
 
     while not(len(ptm_frontier) == 0) or not(len(ptm_frontier) == 0):
-        (ptm_frontier, ptm_explored, ptm_level) = helper(state, ptm_frontier, ptm_explored, op_frontier, op_explored)
-        (op_frontier, op_explored, op_level) = helper(state, op_frontier, op_explored, ptm_frontier, ptm_explored)
+        (ptm_frontier, ptm_explored) = helper(state, ptm_frontier, ptm_explored, ptm_distances)
+        (op_frontier, op_explored) = helper(state, op_frontier, op_explored, op_distances)
 
         
         #how to iterate both through our actions and opponent's actions at the same time??
@@ -53,9 +59,25 @@ def voronoi(asp, state, ptm, op, ptm_loc, op_loc):
     #keep track of depth of bfs, use as score/path length
     return len(ptm_explored) - len(op_explored)
 
-def helper(state, my_frontier, my_explored, op_frontier, op_explored):
+def helper(state, my_frontier, my_explored, distances):
     
-    level = 0
+    print("keys ", distances.keys()
+    cumulativeDists = 0
+   
+    while my_frontier:
+       curr_loc = my_frontier.pop()
+       #when should this be incremented?
+       cumulativeDists += distances[curr_loc]
+       actions = TronProblem.get_safe_actions(state.board, curr_loc)
+       my_explored.append(curr_loc)
+       for a in actions:
+           next_loc = TronProblem.move(curr_loc, a)
+           if not(next_loc in my_explored):
+               distances[next_loc] = (distances[curr_loc] + 1)
+               print("next loc dist ", distances[next_loc])
+               my_frontier.append(next_loc)
+       return (my_frontier, my_explored)
+       
     #new_my_frontier = set()
 
 #    if len(my_frontier) > 0:
@@ -71,16 +93,7 @@ def helper(state, my_frontier, my_explored, op_frontier, op_explored):
 #        return (new_my_frontier, my_explored)
 #
 
-    while my_frontier:
-        curr_loc = my_frontier.pop()
-        actions = TronProblem.get_safe_actions(state.board, curr_loc)
-        my_explored.append(curr_loc)
-        for a in actions:
-            next_loc = TronProblem.move(curr_loc, a)
-            if not(next_loc in my_explored):
-                my_frontier.append(next_loc)
-        level += 1
-        return (my_frontier, my_explored, level)
+
     
 
     
