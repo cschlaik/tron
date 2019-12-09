@@ -8,9 +8,8 @@ from max_abcutoff import *
 from copy import deepcopy
 from dijkstra import *
 
-@static
 def helper(state, my_frontier, my_explored, op_frontier, op_explored):
-	new_my_frontier = {}
+	new_my_frontier = set()
 	for loc in my_frontier:
 		actions = TronProblem.get_safe_actions(state.board, loc)
 		my_explored.add(loc)
@@ -24,10 +23,10 @@ def voronoi(asp, state, ptm, op, ptm_loc, op_loc):
 	'''
 	returns how much space ptm has vs how much space op has.
 	'''
-	ptm_explored = {}
-	op_explored = {}
-	ptm_frontier = {ptm_loc}
-	op_frontier = {op_loc}
+	ptm_explored = set()
+	op_explored = set()
+	ptm_frontier = set([ptm_loc])
+	op_frontier = set([op_loc])
 
 	while not(len(ptm_frontier) == 0) and not(len(ptm_frontier) == 0):
 		(ptm_frontier, ptm_explored) = helper(state, ptm_frontier, ptm_explored, op_frontier, op_explored)

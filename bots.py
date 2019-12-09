@@ -20,6 +20,7 @@ AB_CUTOFF_PLY = 6
 CALC_SCORE_NUM_RECURSIONS = 3
 WALL_HUG = False
 WALL_HUG_NEIGHBORING_TILES = True
+VORONOI = True
 
 def get_safe_actions_state(state, player, loc, has_armor):
         """
@@ -206,6 +207,17 @@ def neighboring_tiles_eval_func(asp, tron_gamestate):
     #print("op score ", op_score)
 
     return ptm_score - op_score
+
+def voronoi_eval_func(asp, tron_gamestate):
+    locs = tron_gamestate.player_locs
+    
+    #the player to move
+    ptm = tron_gamestate.ptm 
+    ptm_loc = locs[ptm]
+    op = get_other_player(ptm)
+    op_loc = locs[op]
+
+    return voronoi(asp, tron_gamestate, ptm, op, ptm_loc, op_loc)
 
 TRAP_WEIGHT = 300
 ARMOR_WEIGHT = 60
@@ -424,6 +436,8 @@ class StudentBot:
         To get started, you can get the current state by calling asp.get_start_state()
         """
         start_state = asp.get_start_state()
+        if VORONOI:
+            return alpha_beta_cutoff(asp, start_state, AB_CUTOFF_PLY, voronoi_eval_func)
 
         if self.first_turn and WALL_HUG:
             self.divider_board = determine_divider_board(start_state.board)
