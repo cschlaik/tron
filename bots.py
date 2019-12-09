@@ -234,6 +234,9 @@ def calculate_score(asp, player, board, tron_gamestate, loc, recur, has_armor):
     THIS is why we do not need to weight powerups in ab_cutoff itself
     "recur" > 0 indicates whether another recursion should be performed
     '''
+    
+    ###VORONOI###
+    voronoi(asp, state,
 
     if asp.is_terminal_state(tron_gamestate):
         if asp.evaluate_state(tron_gamestate)[player] == 0.0:
