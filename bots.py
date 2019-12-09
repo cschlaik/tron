@@ -25,10 +25,17 @@ def voronoi(asp, state, ptm, op, ptm_loc, op_loc):
     '''
     returns how much space ptm has vs how much space op has.
     '''
-    ptm_explored = set()
-    op_explored = set()
-    ptm_frontier = set([ptm_loc])
-    op_frontier = set([op_loc])
+#    ptm_explored = set()
+#    op_explored = set()
+#    ptm_frontier = set([ptm_loc])
+#    op_frontier = set([op_loc])
+
+    ptm_explored = []
+    op_explored = []
+    ptm_frontier = []
+    ptm_frontier.append(ptm_loc)
+    op_frontier = []
+    op_frontier.append(ptm_loc)
     
     #changed from and to or
     while not(len(ptm_frontier) == 0) or not(len(ptm_frontier) == 0):
@@ -41,21 +48,38 @@ def voronoi(asp, state, ptm, op, ptm_loc, op_loc):
 
         #might be ok, since they should only be touching their own frontiers in each?
         
+    #keep track of depth of bfs, use as score/path length
     return len(ptm_explored) - len(op_explored)
 
 def helper(state, my_frontier, my_explored, op_frontier, op_explored):
-    new_my_frontier = set()
+    
+    level = 0
+    #new_my_frontier = set()
 
-    if len(my_frontier) > 0:
-        for loc in my_frontier:
-            actions = TronProblem.get_safe_actions(state.board, loc)
-            my_explored.add(loc)
-            for a in actions:
-                # i think we should write a function that simulates move, bc TronProblem.move actually moves the player?
-                next_loc = TronProblem.move(loc, a)
-                if not(next_loc in op_explored):
-                    new_my_frontier.add(next_loc)
-        return (new_my_frontier, my_explored)
+#    if len(my_frontier) > 0:
+#        for loc in my_frontier:
+#            actions = TronProblem.get_safe_actions(state.board, loc)
+#            my_explored.add(loc)
+#            for a in actions:
+#                # i think we should write a function that simulates move, bc TronProblem.move actually moves the player?
+#                next_loc = TronProblem.move(loc, a)
+#                level += 1
+#                if not(next_loc in op_explored):
+#                    new_my_frontier.add(next_loc)
+#        return (new_my_frontier, my_explored)
+#
+
+    while my_frontier:
+        curr_loc = my_frontier.pop()
+        actions = TronProblem.get_safe_actions(state.board, curr_loc)
+        my_explored.append(curr_loc)
+        for a in actions:
+            next_loc = TronProblem.move(curr_loc, a)
+            level += 1
+            if not(next_loc in my_explored):
+                my_frontier.append(next_loc)
+        return (my_frontier, my_explored, level)
+    
     
     #what to return if frontier empty?
     return (None, None)
