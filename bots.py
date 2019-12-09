@@ -15,7 +15,7 @@ from dijkstra import *
 
 
 #experiment w changing these
-AB_CUTOFF_PLY = 6
+AB_CUTOFF_PLY = 5
 CALC_SCORE_NUM_RECURSIONS = 3
 WALL_HUG = False
 WALL_HUG_NEIGHBORING_TILES = True
@@ -31,7 +31,7 @@ def voronoi(asp, state, ptm, op, ptm_loc, op_loc):
     op_frontier = set([op_loc])
     
     #changed from and to or
-    while not(len(ptm_frontier) == 0) or not(len(ptm_frontier) == 0):
+    while not(len(ptm_frontier) == 0) and not(len(ptm_frontier) == 0):
         (ptm_frontier, ptm_explored) = helper(state, ptm_frontier, ptm_explored, op_frontier, op_explored)
         (op_frontier, op_explored) = helper(state, op_frontier, op_explored, ptm_frontier, ptm_explored)
         
@@ -40,7 +40,8 @@ def voronoi(asp, state, ptm, op, ptm_loc, op_loc):
         #(i.e, both loops editing the same frontier or explored at the same time)
 
         #might be ok, since they should only be touching their own frontiers in each?
-        
+    
+    print("returning")
     return len(ptm_explored) - len(op_explored)
 
 def helper(state, my_frontier, my_explored, op_frontier, op_explored):
@@ -55,10 +56,10 @@ def helper(state, my_frontier, my_explored, op_frontier, op_explored):
                 next_loc = TronProblem.move(loc, a)
                 if not(next_loc in op_explored):
                     new_my_frontier.add(next_loc)
-        return (new_my_frontier, my_explored)
+        #print(new_my_frontier)
+    return (new_my_frontier, my_explored)
     
-    #what to return if frontier empty?
-    return (None, None)
+
 def get_safe_actions_state(state, player, loc, has_armor):
         """
         FROM TRONPROBLEM, BUT TAKES INTO ACCOUNT ARMOR 
