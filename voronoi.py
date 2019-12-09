@@ -54,10 +54,10 @@ def voronoi(asp, state, ptm, op, ptm_loc, op_loc):
 	'''
 	returns how much space ptm has vs how much space op has.
 	'''
-	ptm_explored = {}
-	op_explored = {}
-	ptm_frontier = {ptm_loc}
-	op_frontier = {op_loc}
+	ptm_explored = set()
+    op_explored = set()
+    ptm_frontier = set([ptm_loc])
+    op_frontier = set([op_loc])
     
     #changed from and to or
 	while not(len(ptm_frontier) == 0) or not(len(ptm_frontier) == 0):
