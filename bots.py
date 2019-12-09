@@ -22,14 +22,14 @@ WEIGHTED_VORONOI = True #adds the calc_score eval func
 VORONOI_LEVEL_CUTOFF = 40
 VORONOI_WEIGHT = 0.5
 
-TRAP_WEIGHT = 300
-ARMOR_WEIGHT = 60
-BOMB_WEIGHT = 100 #this one is most contingent on game_state
-SPACE_WEIGHT = 10
-BAD_CELL_WEIGHT = -50
-SPEED_WEIGHT = -300
-NEXT_STATE_DEATH_WEIGHT = -600 #should be less than 1000
-HUG_WEIGHT = 50
+# TRAP_WEIGHT = 300
+# ARMOR_WEIGHT = 60
+# BOMB_WEIGHT = 100 #this one is most contingent on game_state
+# SPACE_WEIGHT = 10
+# BAD_CELL_WEIGHT = -50
+# SPEED_WEIGHT = -300
+# NEXT_STATE_DEATH_WEIGHT = -600 #should be less than 1000
+# HUG_WEIGHT = 50
 
 class StudentBot:
 
@@ -133,8 +133,13 @@ class StudentBot:
         weight_ptm = sb.voronoi_calculate_score(asp, ptm, board, tron_gamestate, ptm_loc, 1, tron_gamestate.player_has_armor(ptm))
         weight_op = sb.voronoi_calculate_score(asp, op, board, tron_gamestate, op_loc, 1, tron_gamestate.player_has_armor(op))
         v = sb.voronoi(asp, tron_gamestate, ptm, op, ptm_loc, op_loc)
+
+        #if v is some value, change self.BOMB_WEIGHT
+
+
         #print("w", weight_ptm-weight_op)
         #print("v", v)
+        #the voronoi value is usually from 1-100, whereas weights are often 500-thousands 
         return v+(VORONOI_WEIGHT)*(weight_ptm-weight_op)
 
     def voronoi_calculate_score(self, asp, player, board, tron_gamestate, loc, recur, has_armor):
@@ -156,14 +161,18 @@ class StudentBot:
         if len(actions) > 0:
             for a in actions:
                 here_has_armor = has_armor
-                next_loc = TronProblem.move(loc, a)#get_next_loc(loc, a) #a (x,y) tuple
-                next_cell = board[next_loc[0]][next_loc[1]] # a celltype "#", "@" etc
-                next_state = asp.transition(tron_gamestate, a) #a gamestate
+                next_loc = TronProblem.move(loc, a)
+                next_cell = board[next_loc[0]][next_loc[1]] 
+                next_state = asp.transition(tron_gamestate, a)
                 #assert next_loc == next_state.player_locs[player]
-                
-                if (next_cell == CellType.BARRIER):
+
+                if (next_cell == CellType.WALL) or next_cell.isdigit(): #isdigit should check for other player
+                    continue
+                elif (next_cell == CellType.BARRIER):
                     if here_has_armor:
                         here_has_armor = False
+                    else:
+                        continue
                 elif next_cell == CellType.SPEED:
                     score_sum += self.SPEED_WEIGHT 
                 elif next_cell == CellType.BOMB:
@@ -175,7 +184,7 @@ class StudentBot:
                     score_sum += self.TRAP_WEIGHT
                         
                 if recur<CALC_SCORE_NUM_RECURSIONS:
-                    score_sum += (1.0/recur)*calculate_score(asp, player, next_state.board, next_state, next_loc, recur+1, here_has_armor)
+                    score_sum += (1.0/recur)*self.voronoi_calculate_score(asp, player, next_state.board, next_state, next_loc, recur+1, here_has_armor)
                     #print(score_sum)
         
         else: #NEXT move will be terminal state for player
@@ -190,19 +199,22 @@ class StudentBot:
         the startgame into the endgame strategy (a boolean)
 
         should kick in when we have boxed in our opponent, or are trying to save space?
+        or maybe this should happen w/in the eval_func, before
         '''
+        if False:
+            self.BOMB_WEIGHT = 0
         return False 
 
     def __init__(self):
 
-        self.TRAP_WEIGHT = 300
+        self.TRAP_WEIGHT = 400
         self.ARMOR_WEIGHT = 60
         self.BOMB_WEIGHT = 100 #this one is most contingent on game_state
-        self.SPACE_WEIGHT = 10
-        self.BAD_CELL_WEIGHT = -50
+        #self.SPACE_WEIGHT = 10
+        #self.BAD_CELL_WEIGHT = -50
         self.SPEED_WEIGHT = -300
         self.NEXT_STATE_DEATH_WEIGHT = -600 #should be less than 1000
-        self.HUG_WEIGHT = 50
+        #self.HUG_WEIGHT = 50
 
     def decide(self, asp):
         """
@@ -218,7 +230,6 @@ class StudentBot:
             return alpha_beta_cutoff(asp, start_state, AB_CUTOFF_PLY, wallhug_neighboring_tiles_eval_func)
         else: #currently won't work
             return alpha_beta_cutoff(asp, start_state, AB_CUTOFF_PLY, neighboring_tiles_eval_func)
-
 
     def cleanup(self):
         """
