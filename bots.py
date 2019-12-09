@@ -15,7 +15,7 @@ from dijkstra import *
 
 
 #experiment w changing these
-AB_CUTOFF_PLY = 6
+AB_CUTOFF_PLY = 5
 CALC_SCORE_NUM_RECURSIONS = 3
 WALL_HUG = False
 WALL_HUG_NEIGHBORING_TILES = True
@@ -38,16 +38,18 @@ def voronoi(asp, state, ptm, op, ptm_loc, op_loc):
     op_frontier.append(ptm_loc)
     
     #changed from and to or
+
     while not(len(ptm_frontier) == 0) or not(len(ptm_frontier) == 0):
         (ptm_frontier, ptm_explored, ptm_level) = helper(state, ptm_frontier, ptm_explored, op_frontier, op_explored)
         (op_frontier, op_explored, op_level) = helper(state, op_frontier, op_explored, ptm_frontier, ptm_explored)
+
         
         #how to iterate both through our actions and opponent's actions at the same time??
         #not sure this solution works / wouldn't lead to concurrency problems 
         #(i.e, both loops editing the same frontier or explored at the same time)
 
         #might be ok, since they should only be touching their own frontiers in each?
-        
+
     #keep track of depth of bfs, use as score/path length
     return len(ptm_explored) - len(op_explored)
 
@@ -80,9 +82,9 @@ def helper(state, my_frontier, my_explored, op_frontier, op_explored):
         level += 1
         return (my_frontier, my_explored, level)
     
+
     
-    #what to return if frontier empty?
-    return (None, None)
+
 def get_safe_actions_state(state, player, loc, has_armor):
         """
         FROM TRONPROBLEM, BUT TAKES INTO ACCOUNT ARMOR 
