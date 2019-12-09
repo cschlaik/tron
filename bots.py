@@ -33,6 +33,56 @@ VORONOI_WEIGHT = 0.5
 
 class StudentBot:
 
+#    def BFS: (state, frontier, explored):
+#
+#        if frontier:
+#            curr_loc = frontier.pop()
+#            actions = get_safe_actions_new(state.board, curr_loc, state.player_has_armor(state.ptm))
+#            explored.add(curr_loc)
+#            for a in actions:
+#            next_loc = TronProblem.move(curr_loc, a)
+#            if not(next_loc in explored):
+#                my_frontier.append(next_loc)
+#
+#    return (frontier, explored)
+    def new_voronoi(self, asp, state, ptm, op, ptm_loc, op_loc):
+        #flood fill ptm
+        adv = StudentBot.flood_fill(state, ptm, ptm_loc, op_loc)
+       #opponent is reachable
+        if adv == 0:
+            #no advantage
+            return 0
+        else:
+            op_adv = StudentBot.flood_fill(state, op, op_loc, ptm_loc)
+            #print("return adv ", adv - op_adv)
+            return adv - op_adv
+        
+        
+    def flood_fill(state, player, loc, seek):
+        explored = set()
+        frontier = []
+        
+        frontier.append(loc)
+        
+        while len(frontier) > 0:
+            curr_loc = frontier.pop()
+            actions = get_safe_actions_new(state.board, curr_loc, state.player_has_armor(state.ptm))
+            explored.add(curr_loc)
+            for a in actions:
+                next_loc = TronProblem.move(curr_loc, a)
+                #if opponent is floodfilling in cases where walled off, this won't be executed, and will keep running till empty
+                if next_loc == seek:
+                    print("opponent is reachable")
+                    #break out of loop
+                    return 0
+                if not(next_loc in explored):
+                    frontier.append(next_loc)
+        #number of reachable cells
+        #print(player, " explored ", len(explored))
+        print("frontier exhausted, opponent is not reachable")
+        return len(explored)
+    
+    
     def voronoi(self, asp, state, ptm, op, ptm_loc, op_loc):
         '''
         returns how much space ptm has vs how much space op has.
@@ -84,8 +134,8 @@ class StudentBot:
             #     print("*******************************************************timeout")
             #     return ptm_score - op_score
             level += 1
-        #print(level)
-#        print("ptm explored ", len(ptm_explored) , " op explored ", len(op_explored))
+        print(level)
+        print("ptm explored ", len(ptm_explored) , " op explored ", len(op_explored))
         #keep track of depth of bfs, use as score/path length
         #return len(ptm_explored) - len(op_explored)
         for loc in pathDistDict:
@@ -119,28 +169,41 @@ class StudentBot:
                 my_frontier.append(next_loc)
             #print(len(my_explored))
         return (my_frontier, my_explored, pathDistDict)
+#
+#    def weighted_voronoi_eval_func(sb, asp, tron_gamestate):
+#        locs = tron_gamestate.player_locs
+#
+#        #the player to move
+#        ptm = tron_gamestate.ptm
+#        ptm_loc = locs[ptm]
+#        op = get_other_player(ptm)
+#        op_loc = locs[op]
+#        board = tron_gamestate.board
+#
+#        weight_ptm = sb.voronoi_calculate_score(asp, ptm, board, tron_gamestate, ptm_loc, 1, tron_gamestate.player_has_armor(ptm))
+#        weight_op = sb.voronoi_calculate_score(asp, op, board, tron_gamestate, op_loc, 1, tron_gamestate.player_has_armor(op))
+#        v = sb.voronoi(asp, tron_gamestate, ptm, op, ptm_loc, op_loc)
+#
+#        #if v is some value, change self.BOMB_WEIGHT
+#
+#
+#        #print("w", weight_ptm-weight_op)
+#        #print("v", v)
+#        #the voronoi value is usually from 1-100, whereas weights are often 500-thousands
+#        return v+(VORONOI_WEIGHT)*(weight_ptm-weight_op)
 
+    
     def weighted_voronoi_eval_func(sb, asp, tron_gamestate):
         locs = tron_gamestate.player_locs
         
         #the player to move
-        ptm = tron_gamestate.ptm 
+        ptm = tron_gamestate.ptm
         ptm_loc = locs[ptm]
+        
         op = get_other_player(ptm)
         op_loc = locs[op]
-        board = tron_gamestate.board
 
-        weight_ptm = sb.voronoi_calculate_score(asp, ptm, board, tron_gamestate, ptm_loc, 1, tron_gamestate.player_has_armor(ptm))
-        weight_op = sb.voronoi_calculate_score(asp, op, board, tron_gamestate, op_loc, 1, tron_gamestate.player_has_armor(op))
-        v = sb.voronoi(asp, tron_gamestate, ptm, op, ptm_loc, op_loc)
-
-        #if v is some value, change self.BOMB_WEIGHT
-
-
-        #print("w", weight_ptm-weight_op)
-        #print("v", v)
-        #the voronoi value is usually from 1-100, whereas weights are often 500-thousands 
-        return v+(VORONOI_WEIGHT)*(weight_ptm-weight_op)
+        return sb.new_voronoi(asp, tron_gamestate, ptm, op, ptm_loc, op_loc)
 
     def voronoi_calculate_score(self, asp, player, board, tron_gamestate, loc, recur, has_armor):
         '''
