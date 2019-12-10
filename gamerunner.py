@@ -7,7 +7,7 @@ import random
 import numpy as np
 
 
-def run_game(asp, bots, visualizer=None, delay=0.2, max_wait=20, colored=True):
+def run_game(asp, bots, visualizer=None, delay=0.2, max_wait=0.3, colored=True):
     """
     Inputs:
         - asp: an adversarial search problem
@@ -131,7 +131,7 @@ def main():
 
 class Argument_Defaults:
     MAP = "./maps/empty_room.txt"
-    MAX_WAIT = 20 #0.3
+    MAX_WAIT = 0.3
     BOTS = ["random", "random"]
     IMAGE_DELAY = 0.2
 

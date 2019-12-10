@@ -14,8 +14,8 @@ import time
 #Put currently using functions inside of StudentBot
 
 #experiment w changing these
-AB_CUTOFF_PLY = 5 #this can't go to 5
-CALC_SCORE_NUM_RECURSIONS = 3
+AB_CUTOFF_PLY = 4 #this can't go to 5
+CALC_SCORE_NUM_RECURSIONS = 0
 
 WEIGHTED_VORONOI = True #adds the calc_score eval func
 VORONOI_LEVEL_CUTOFF = 40
@@ -41,8 +41,10 @@ class StudentBot:
         op_explored = set()
         ptm_frontier = Queue()
         ptm_frontier.put(ptm_loc)
+        ptm_explored.add(ptm_loc)
         op_frontier = Queue()
         op_frontier.put(op_loc)
+        op_explored.add(op_loc)
         
         total_score = 0
         board = state.board
@@ -53,16 +55,16 @@ class StudentBot:
             (op_frontier, op_explored) = StudentBot.final_helper(board, op_frontier, op_explored, ptm_frontier, ptm_explored)
 
         #print("*************************************")
-        #print(len(ptm_explored))
-        #print(len(op_explored))
+            #print("ptm explor ", len(ptm_explored), "op explor",  len(op_explored))
+        #print("adv ", len(ptm_explored) - len(op_explored))
 
-        return len(op_explored) - len(ptm_explored)
+        return len(ptm_explored) - len(op_explored)
         
     def final_helper(board, my_frontier, my_explored, op_frontier, op_explored):
         if not(my_frontier.empty()):
             curr_loc = my_frontier.get()
             actions = get_safe_actions_final(board, curr_loc)
-            my_explored.add(curr_loc)
+            #my_explored.add(curr_loc)
             for a in actions:
                 next_loc = TronProblem.move(curr_loc, a)
                 if not(next_loc in my_explored) and not(next_loc in op_explored):
@@ -82,6 +84,7 @@ class StudentBot:
 
         weight_ptm = sb.voronoi_calculate_score(asp, ptm, board, tron_gamestate, ptm_loc, 1, tron_gamestate.player_has_armor(ptm))
         weight_op = sb.voronoi_calculate_score(asp, op, board, tron_gamestate, op_loc, 1, tron_gamestate.player_has_armor(op))
+        
         v = sb.final_voronoi(asp, tron_gamestate, ptm, op, ptm_loc, op_loc)
 
        #if v is some value, change self.BOMB_WEIGHT
@@ -90,7 +93,8 @@ class StudentBot:
         #print("w", weight_ptm-weight_op)
         #print("v", v)
        #the voronoi value is usually from 1-100, whereas weights are often 500-thousands
-        return v*10+(VORONOI_WEIGHT)*(weight_ptm-weight_op)
+        return v*10+0.3*(weight_ptm-weight_op)
+        #return v
 
 
     def voronoi_calculate_score(self, asp, player, board, tron_gamestate, loc, recur, has_armor):
@@ -174,13 +178,7 @@ class StudentBot:
         To get started, you can get the current state by calling asp.get_start_state()
         """
         start_state = asp.get_start_state()
-
-        if WEIGHTED_VORONOI:
-            return alpha_beta_cutoff(self, asp, start_state, AB_CUTOFF_PLY, StudentBot.weighted_voronoi_eval_func)
-        elif WALL_HUG_NEIGHBORING_TILES: #currently won't work
-            return alpha_beta_cutoff(asp, start_state, AB_CUTOFF_PLY, wallhug_neighboring_tiles_eval_func)
-        else: #currently won't work
-            return alpha_beta_cutoff(asp, start_state, AB_CUTOFF_PLY, neighboring_tiles_eval_func)
+        return alpha_beta_cutoff(self, asp, start_state, AB_CUTOFF_PLY, StudentBot.weighted_voronoi_eval_func)
 
     def cleanup(self):
         """
